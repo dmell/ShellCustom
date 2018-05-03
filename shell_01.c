@@ -3,6 +3,9 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 char * estrai (char *source, int index);
 
@@ -34,8 +37,8 @@ int main(int argc, char **argv)
 	// memorizzo parametri inseriti
 	char *outfile = NULL;  // stringa con nome oufile di log
 	char *errfile = NULL;  // stringa con nome errfile di log
-	// lunghezza file di log (inizializzata a -1 per controllare inserimento utente, 
-	// poi settata a 5000 se l'utente non indica nulla)  
+	// lunghezza file di log (inizializzata a -1 per controllare inserimento utente,
+	// poi settata a 5000 se l'utente non indica nulla)
 	int logfileLenght = -1;
 	int code = 0;  // usato come bool per opzione codice uscita
 	for (int i = 1; i < argc; i++)
@@ -120,7 +123,7 @@ int main(int argc, char **argv)
 		}
 		else if (strncmp(argv[i], "-c", 2) == 0 || strncmp(argv[i], "--code", 6) == 0)
 		{
-			code = 1; // the flag is set to include return code of the commands 
+			code = 1; // the flag is set to include return code of the commands
 			// N.B.: you can do it multiple times
 		}
 	}
