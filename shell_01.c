@@ -6,13 +6,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#define STDOUT 1
 
 char * estrai (char *source, int index);
 
 int main(int argc, char **argv)
 {
-	// verifico se è stata richiesta la consultazione del manuale
-	int man = 0; // usato come bool
+	// if man has been requested
+	int man = 0; // used as bool
 	for (int i = 1; i < argc; i++)
 	{
 		if (strcmp("--help",argv[i]) == 0)
@@ -34,87 +35,86 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	// memorizzo parametri inseriti
-	char *outfile = NULL;  // stringa con nome oufile di log
-	char *errfile = NULL;  // stringa con nome errfile di log
-	// lunghezza file di log (inizializzata a -1 per controllare inserimento utente,
-	// poi settata a 5000 se l'utente non indica nulla)
+	// parameters
+	char *outfile = NULL;  // the name of log outfile
+	char *errfile = NULL;  // the name of log errfile
+	// length set to -1 to check if the user has specified a new length, otherwise 5000
 	int logfileLenght = -1;
 	int code = 0;  // usato come bool per opzione codice uscita
 	for (int i = 1; i < argc; i++)
 	{
-		if (strncmp(argv[i], "-o=", 3) == 0)  // parametro outfile corto
+		if (strncmp(argv[i], "-o=", 3) == 0)  // short outfile
 		{
-			if (outfile == NULL)  // outfile non ancora indicato
+			if (outfile == NULL)  // not set yet
 			{
-				outfile = estrai (argv[i], 3);
+				outfile = estrai(argv[i], 3);
 			}
-			else  // outfile già indicato
+			else  // already set, error
 			{
 				printf("shell: outfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
 			}
 		}
-		else if (strncmp(argv[i], "--outfile=", 10) == 0)  // parametro outfile lungo
+		else if (strncmp(argv[i], "--outfile=", 10) == 0)  // long outfile
 		{
-			if (outfile == NULL)  // outfile non ancora indicato
+			if (outfile == NULL)  // not set yet
 			{
 				outfile = estrai (argv[i], 10);
 			}
-			else  // outfile già indicato
+			else  // already sey, error
 			{
 				printf("shell: outfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
 			}
 		}
-		else if (strncmp(argv[i], "-e=", 3) == 0)  // parametro errfile corto
+		else if (strncmp(argv[i], "-e=", 3) == 0)  // short errfile
 		{
-			if (errfile == NULL)  // errfile non ancora indicato
+			if (errfile == NULL)  // not set yet
 			{
 				errfile = estrai (argv[i], 3);
 			}
-			else  // errfile già indicato
+			else  // already sey, error
 			{
 				printf("shell: errfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
 			}
 		}
-		else if (strncmp(argv[i], "--errfile=", 10) == 0)  // parametro errfile lungo
+		else if (strncmp(argv[i], "--errfile=", 10) == 0)  // long errfile
 		{
-			if (errfile == NULL)  // errfile non ancora indicato
+			if (errfile == NULL)  // not set yet
 			{
 				errfile = estrai (argv[i], 10);
 			}
-			else  // errfile già indicato
+			else  // already sey, error
 			{
 				printf("shell: errfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
 			}
 		}
-		else if (strncmp(argv[i], "-m=", 3) == 0)  // parametro maxlen corto
+		else if (strncmp(argv[i], "-m=", 3) == 0)  // short maxlen
 		{
-			if (logfileLenght == -1)  // lunghezza non ancora indicata
+			if (logfileLenght == -1)  // not set yet
 			{
 				logfileLenght = atoi(estrai (argv[i], 3));
 			}
-			else  // lunghezza già indicata
+			else  // already set, error
 			{
 				printf("shell: maxlen parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
 			}
 		}
-		else if (strncmp(argv[i], "--maxlen=", 9) == 0)  // parametro maxlen lungo
+		else if (strncmp(argv[i], "--maxlen=", 9) == 0)  // long maxlen
 		{
-			if (errfile == NULL)  // lunghezza non ancora indicata
+			if (errfile == NULL)  // not set yet
 			{
 				logfileLenght = atoi(estrai (argv[i], 9));
 			}
-			else  // lunghezza già indicata
+			else  // already set, error
 			{
 				printf("shell: maxlen parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
@@ -128,8 +128,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (logfileLenght == -1)  // se l'utente non ha settato lunghezza massima file di log
-		logfileLenght = 5000;  // lunghezza di default
+	if (logfileLenght == -1)  // if the maximum length has not been specified
+		logfileLenght = 5000;  // default
 
 	// we check that the user has specified the log files
 	if (outfile == NULL || errfile == NULL)
@@ -140,17 +140,32 @@ int main(int argc, char **argv)
 	}
 
 	// file descriptors
-	int fd[2];
+	int fd[3];
 	fd[0] = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 	fd[1] = open(errfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	fd[2] = open("tmp.txt", O_RDWR | O_CREAT | O_TRUNC, 0777);
 
+	if (fd[0] < 0 || fd[1] < 0 || fd[2] < 0)
+	{
+		perror("Fail in opening files");
+		exit(1);
+	}
+
+	dup2(fd[2], STDOUT);
+	/* now everything that we intend to print in stdout is printed in tmp.txt (including ">>")
+	PROBLEM: system(line) prints on stdout, but after this instruction everything goes to tmp and there
+	is no way to come back. So dup2 is bad because we can't come back writing to stdout, but is the only 
+	way to redirect what system(line) prints. Moral? System(line) is not ok for us, we need to manipulate
+	the results of our commands differently. 
+	*/
 	char *line = NULL;  // stringa dove viene memorizzato il comando inserito dall'utente
 	size_t len = 0;  // ???
 	ssize_t read = 0;  // numero di caratteri letti (valore di ritorno di getlineq)
 	int error;  // codice di errore dell'esecuzione del comando (valore di ritorno di system)
 
 	while (1) {
-		printf(">> ");
+		fprintf(stdout, ">> ");
+		fflush(stdout);
 		read = getline(&line, &len, stdin);
 		error = system(line);
 	}
