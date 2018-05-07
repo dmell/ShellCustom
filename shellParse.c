@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #define STDOUT 1
 #define CMDSIZE 10
@@ -14,7 +15,9 @@ char * estrai (char *source, int index);
 // extracts a substring between given indexes
 char * substring (char * src, int first, int last);
 // handles the commands
-char** parseCommand (char * cmd);
+char** parseCommand (char * cmd, int * cmds);
+// execute the commands
+void run (char * cmd, char * outfile, char * errfile);
 
 int main(int argc, char **argv)
 {
@@ -146,16 +149,16 @@ int main(int argc, char **argv)
 	}
 
 	// file descriptors
-	int fd[3];
-	fd[0] = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	fd[1] = open(errfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	fd[2] = open("tmp.txt", O_RDWR | O_CREAT | O_TRUNC, 0777);
+	//int fd[3];
+	//fd[0] = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	//fd[1] = open(errfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	//fd[2] = open("tmp.txt", O_RDWR | O_CREAT | O_TRUNC, 0777);
 
-	if (fd[0] < 0 || fd[1] < 0 || fd[2] < 0)
-	{
-		perror("Fail in opening files");
-		exit(1);
-	}
+	// if (fd[0] < 0 || fd[1] < 0 || fd[2] < 0)
+	// {
+	// 	perror("Fail in opening files");
+	// 	exit(1);
+	// }
 
 	char *line = NULL;  // stringa dove viene memorizzato il comando inserito dall'utente
 	size_t len = 0;  // ???
@@ -166,13 +169,10 @@ int main(int argc, char **argv)
 		fprintf(stdout, ">> ");
 		fflush(stdout);
 		read = getline(&line, &len, stdin);
-		char ** cmd = parseCommand(line);
+		int cmds=1;  // there's always one command
+		char ** cmd = parseCommand(line, &cmds);
 		int i;
-		for (i = 0; i < 3; i++)
-		{
-			printf("%s\n", cmd[i]);
-		}
-		// int returnCode = run(cmd) // TODO
+		run(cmd[0],outfile,errfile);  // TODO: pass other parameters like logfileLenght and code
 	}
 
 	// free dynamic allocation of strings
@@ -183,13 +183,16 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-char** parseCommand (char * cmd)
+char** parseCommand (char * cmd, int * cmds)
 {
 	if (strncmp(cmd, "exit", 4) == 0)
 	{
 		printf("Goodbye\n");
 		exit(0);
 	}
+
+	// codice di Damiano
+	/*
 	char * pipe = NULL; // let's check if there are more processes, this points to the next one
 	int cmds = 0;
 	// TODO: maybe it would be cool to handle ; and && too
@@ -200,10 +203,25 @@ char** parseCommand (char * cmd)
 		// here's the bug! Endless cycle
 	}
 	while (pipe != NULL);
+	*/
+
+
+	// codice di Riccardo
+	int index = 0;
+	do {
+		if (cmd[index] == '|')
+		{
+			(*cmds)++;
+		}
+		index++;
+	}
+	while(cmd[index] != '\0');
+
+
 	// at this point we create a new vector of strings, that contains a command per position
 	// since we have counted how many they are, there here's the dynaminc allocation
 	// (hopefully working without SEGFAULT)
-	char ** cleancmd = malloc(cmds * sizeof(char *));
+	char ** cleancmd = malloc((*cmds)*(sizeof(char *)));
 	int i;
 	/*for (i = 0; i < cmds; i++)
 	{
@@ -213,13 +231,14 @@ char** parseCommand (char * cmd)
 	int j = 0; // counter in array of commands
 	for (i = 0; cmd[i] !='\0'; i++)
 	{
-		if (i == '|')
+		if (cmd[i] == '|')
 		{
 			cleancmd[j] = substring(cmd, beg, i-1);
 			j++;
-			beg = i + 1;
+			beg = i + 2;  // NB: it works with blank space after the pipe character!!!
 		}
 	}
+	cleancmd[j] = substring(cmd, beg, i-2);  // insert last command
 	return cleancmd;
 }
 
@@ -256,4 +275,68 @@ char * substring (char * src, int first, int last)
 	}
 	res[j] = '\0';
 	return res;
+}
+
+
+
+void run (char * cmd, char * outfile, char * errfile)
+{
+	pid_t  pid;
+	int errorCode;
+
+    if ((pid = fork()) < 0)
+	{
+        printf("Error forking!\n");
+        exit(1);
+    }
+    else if (pid == 0) // child
+	{
+		int fdOut = open("tmpOut.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+		int fdErr = open("tmpErr.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+
+		dup2(1,fdOut);  // write the stdout of the command in tmpOut.txt
+		dup2(2,fdErr);  // write the stderr of the command in tmpErr.txt
+
+        errorCode = system(cmd);
+		close(fdOut);
+		close(fdErr);
+    }
+    else // parent
+	{
+        wait(NULL);  // wait for the child
+
+		int fdOut = open("tmpOut.txt", O_RDONLY, 0777);
+		int fdErr = open("tmpErr.txt", O_RDONLY, 0777);
+
+        char buf[5000];
+        int dim = read(fdOut,buf,5000);  // read the output written from the child in tmpOut.txt
+        printf("%s\n", buf);  // print the output in the shell
+
+		int fdFileOut = open(outfile, O_WRONLY | O_CREAT, 0777);
+		int fdFileErr = open(errfile, O_WRONLY | O_CREAT, 0777);
+
+		dim = read(fdOut,buf,5000);  // read the stdout in the tmpOut.txt file
+		write(fdFileOut, "COMMAND:\t", strlen("COMMAND:\t"));
+		write(fdFileOut, cmd, strlen(cmd));
+		write(fdFileOut, "\nOUTPUT:\n", strlen("OUTPUT:\n"));
+		write(fdFileOut, buf, dim);  // write in the out log file
+		dim = sprintf(buf, "RETURN CODE:\t%d", errorCode);
+		write(fdFileErr, buf, dim);
+		write(fdFileOut, "\n------------------------------------------------\n", strlen("\n------------------------------------------------\n"));
+
+		dim = read(fdErr,buf,5000);  // read the stderr in the tmpErr.txt file
+		write(fdFileErr, "COMMAND:\t", strlen("COMMAND:\t"));
+		write(fdFileErr, cmd, strlen(cmd));
+		write(fdFileErr, "\nERROR OUTPUT:\n", strlen("ERROR OUTPUT:\n"));
+		write(fdFileErr, buf, dim);  // write in the out log file
+		dim = sprintf(buf, "RETURN CODE:\t%d", errorCode);
+		write(fdFileErr, buf, dim);
+		write(fdFileErr, "\n------------------------------------------------\n", strlen("\n------------------------------------------------\n"));
+
+		// close file descriptors
+		close(fdOut);
+		close(fdErr);
+		close(fdFileOut);
+		close(fdFileErr);
+    }
 }
