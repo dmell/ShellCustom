@@ -236,7 +236,7 @@ char** parseCommand (char * cmd, int * cmds)
 		{
 			cleancmd[j] = substring(cmd, beg, i-1);
 			j++;
-			beg = i + 2;
+			beg = i + 2;  // NB: it works with blank space after the pipe character!!!
 		}
 	}
 	cleancmd[j] = substring(cmd, beg, i-2);  // insert last command
