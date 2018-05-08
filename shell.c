@@ -11,8 +11,8 @@
 #define STDOUT 1
 #define CMDSIZE 10
 #define MAXBUF 4096
-#define SEPARATOR "\n\n------------------------------------------------\n\n"
-#define SEPARATOR_LEN 52
+#define SEPARATOR "\n------------------------------------------------\n\n"
+#define SEPARATOR_LEN 51
 #define DATESIZE 64
 
 // extracts filename in args
@@ -22,7 +22,7 @@ char * substring (char * src, int first, int last);
 // handles the commands
 char** parseCommand (char * cmd, int * cmds);
 // execute the commands
-void run (char * cmd, char * outfile, char * errfile, int * fd);
+void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag);
 
 int main(int argc, char **argv)
 {
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 		int cmds=1;  // there's always one command
 		char ** cmd = parseCommand(line, &cmds);
 		int i;
-		run(cmd[0],outfile,errfile, fd);  // TODO: pass other parameters like logfileLenght and code
+		run(cmd[0],outfile,errfile, fd, code);  // TODO: pass other parameters like logfileLenght and code
 	}
 
 	// free dynamic allocation of strings
@@ -269,7 +269,7 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char * cmd, char * outfile, char * errfile, int * fd)
+void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
 {
 	pid_t pid;
 	int errorCode;
@@ -312,18 +312,21 @@ void run (char * cmd, char * outfile, char * errfile, int * fd)
         char buf[MAXBUF];
         bzero(buf, MAXBUF); // clean the buffer
         int dim = read(fdOut,buf,MAXBUF);  // read the output written from the child in tmpOut.txt
-        printf("%s\n", buf);  // print the output in the shell
+        printf("%s", buf);  // print the output in the shell
 
         write(fd[0], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[0], cmd, strlen(cmd));
 		char date[DATESIZE];
 		strftime(date, sizeof(date), "%c", tm);
 		write(fd[0], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
-		write(fd[0], date, sizeof(date));
+		write(fd[0], date, DATESIZE);
 		write(fd[0], "\n\nOUTPUT:\n\n", strlen("\n\nOUTPUT:\n\n"));
 		write(fd[0], buf, dim);  // write in the out log file
-		dim = sprintf(buf, "\nRETURN CODE:\t%d", errorCode);
-		write(fd[0], buf, dim);
+		if (codeFlag == 1)
+		{
+			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
+			write(fd[0], buf, dim);
+		}
 		write(fd[0], SEPARATOR, SEPARATOR_LEN);
 
 		bzero(buf, MAXBUF);
@@ -334,8 +337,11 @@ void run (char * cmd, char * outfile, char * errfile, int * fd)
 		write(fd[1], cmd, strlen(cmd));
 		write(fd[1], "\n\nERROR OUTPUT:\n", strlen("\n\nERROR OUTPUT:\n"));
 		write(fd[1], buf, dim);  // write in the out log file
-		dim = sprintf(buf, "\nRETURN CODE:\t%d", errorCode);
-		write(fd[1], buf, dim);
+		if (codeFlag == 1)
+		{
+			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
+			write(fd[1], buf, dim);
+		}
 		write(fd[1], SEPARATOR, SEPARATOR_LEN);
 
 		// close file descriptors
