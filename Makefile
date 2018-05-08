@@ -1,16 +1,20 @@
 .PHONY: build clean
 
-build: shell
-	@echo "Shell is compiling..."
+build: temp | shell
 
 clean:
 	@rm -rf ./bin
-	mv src/shell_01.c .
+	@mv src/shell.c .
 	@rm -rf ./src
 
+temp:
+	@echo "Generating subfolders and temporary files..."
+	@mkdir bin
+	@mkdir src
+	@mkdir ./src/tmp
+
 shell:
-	mkdir bin
-	mkdir src
-	gcc -o shell shell_01.c
-	mv shell_01.c ./src
-	mv shell ./bin
+	@echo "Shell is compiling..."
+	@gcc -o shell shell.c
+	@mv shell.c ./src
+	@mv shell ./bin
