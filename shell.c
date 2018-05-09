@@ -13,7 +13,7 @@
 #define MAXBUF 4096
 #define SEPARATOR "\n------------------------------------------------\n\n"
 #define SEPARATOR_LEN 51
-#define DATESIZE 64
+#define DATESIZE 32
 
 // extracts filename in args
 char * estrai (char *source, int index);
@@ -168,6 +168,12 @@ int main(int argc, char **argv)
 	ssize_t read = 0;  // numero di caratteri letti (valore di ritorno di getlineq)
 	int error;  // codice di errore dell'esecuzione del comando (valore di ritorno di system)
 
+    //Brief description of the Shell
+    printf("Sfssfsfsfsffssstackframe's Custom shell\n");
+    printf("v0.1 (May 7 2018)\n");
+    printf("Simple shell based on BASH with real time on file logging capabilities\n");
+    printf("Type exit to dismiss\n");
+
 	while (1) {
 		fprintf(stdout, ">> ");
 		fflush(stdout);
@@ -309,19 +315,26 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
 		int fdOut = open("../src/tmp/tmpOut.txt", O_RDONLY, 0777);
 		int fdErr = open("../src/tmp/tmpErr.txt", O_RDONLY, 0777);
 
+        //INITIALIZING BUFFERS
         char buf[MAXBUF];
+        char date[DATESIZE];
         bzero(buf, MAXBUF); // clean the buffer
+        bzero(date, DATESIZE); //clean the date buffer
+
         int dim = read(fdOut,buf,MAXBUF);  // read the output written from the child in tmpOut.txt
         printf("%s", buf);  // print the output in the shell
 
+        //COMMAND
         write(fd[0], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[0], cmd, strlen(cmd));
-		char date[DATESIZE];
+		//DATE
 		strftime(date, sizeof(date), "%c", tm);
 		write(fd[0], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
-		write(fd[0], date, DATESIZE);
+		write(fd[0], date, strlen(date));
+        //COMMAND OUTPUT
 		write(fd[0], "\n\nOUTPUT:\n\n", strlen("\n\nOUTPUT:\n\n"));
 		write(fd[0], buf, dim);  // write in the out log file
+        //COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
 			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
@@ -330,13 +343,20 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
 		write(fd[0], SEPARATOR, SEPARATOR_LEN);
 
 		bzero(buf, MAXBUF);
+        bzero(date, DATESIZE);
         dim = read(fdErr,buf,MAXBUF);  // read the stderr in the tmpErr.txt file
         printf("%s\n", buf);  // print the output in the shell
-
+        //COMMAND
 		write(fd[1], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[1], cmd, strlen(cmd));
+        //DATE
+        strftime(date, sizeof(date), "%c", tm);
+		write(fd[1], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
+		write(fd[1], date, strlen(date));
+        //COMMAND ERROR OUTPUT
 		write(fd[1], "\n\nERROR OUTPUT:\n", strlen("\n\nERROR OUTPUT:\n"));
 		write(fd[1], buf, dim);  // write in the out log file
+        //COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
 			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
