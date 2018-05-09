@@ -10,11 +10,14 @@
 #include <time.h>
 #define STDOUT 1
 #define CMDSIZE 10
-#define MAXLOGLEN 4096
+#define DEFAULTLOGLEN 4096
+#define MINLOGLEN 512
 #define MAXBUF 512
 #define SEPARATOR "\n------------------------------------------------\n\n"
 #define SEPARATOR_LEN 51
 #define DATESIZE 32
+#define LOGLAYOUT_CODE 120
+#define LOGLAYOUT_NOCODE 105
 
 // extracts filename in args
 char * estrai (char *source, int index);
@@ -23,7 +26,10 @@ char * substring (char * src, int first, int last);
 // handles the commands
 char** parseCommand (char * cmd, int * cmds);
 // execute the commands
-void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght);
+void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght);
+
+int logOutLen = 0;
+int logErrLen = 0;
 
 int main(int argc, char **argv)
 {
@@ -45,7 +51,7 @@ int main(int argc, char **argv)
 		printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr\n\n");
 		printf("Optional parameters:\n");
 		printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
-		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n\n", MAXLOGLEN);
+		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n\n", DEFAULTLOGLEN);
 		printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands\n\n");
 		printf("  -s[=NUMBER],--size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
 		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n", MAXBUF);
@@ -173,10 +179,17 @@ int main(int argc, char **argv)
 	}
 
 	if (logfileLenght == -1)  // if the maximum length has not been specified
-		logfileLenght = MAXLOGLEN;  // default
+		logfileLenght = DEFAULTLOGLEN;  // default
 
 	if (bufLenght == -1)
 		bufLenght = MAXBUF;
+
+	if (logfileLenght < MINLOGLEN || logfileLenght < bufLenght)
+	{
+		printf("shell: error in buffer or file size.\n");
+		printf("Try './shell --help' for more information.\n");
+		exit(1);
+	}
 
 	// we check that the user has specified the log files
 	if (outfile == NULL || errfile == NULL)
@@ -203,7 +216,7 @@ int main(int argc, char **argv)
 
     //Brief description of the Shell
     printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.1 (May 7 2018)\n");
+    printf("v0.2 (May 9 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 
@@ -214,7 +227,7 @@ int main(int argc, char **argv)
 		int cmds=1;  // there's always one command
 		char ** cmd = parseCommand(line, &cmds);
 		int i;
-		run(cmd[0],outfile,errfile, fd, code, bufLenght);  // TODO: pass other parameters like logfileLenght and code
+		run(cmd[0],outfile,errfile, fd, code, bufLenght, logfileLenght);
 	}
 
 	// free dynamic allocation of strings
@@ -308,7 +321,7 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght)
+void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght)
 {
 	pid_t pid;
 	int errorCode;
@@ -349,18 +362,44 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		int fdErr = open("../src/tmp/tmpErr.txt", O_RDONLY, 0777);
 
         //INITIALIZING BUFFERS
-        char buf[MAXBUF];
+        char buf[MAXBUF]; // stdout buff
+        char buf2[MAXBUF]; // stderr buff
         char date[DATESIZE];
         bzero(buf, MAXBUF); // clean the stdout buffer
+        bzero(buf2, MAXBUF); // clean the stderr buffer
         bzero(date, DATESIZE); //clean the date buffer
 
         int dim = read(fdOut,buf,MAXBUF);  // read the output written from the child in tmpOut.txt
+        int dim2 = read(fdErr, buf2, MAXBUF); 
         // N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
         if (dim > bufLenght)
         {
         	printf("The output of the command is too long.\n\n");
         	return;
         }
+        int dimOutNewCmd = strlen(cmd) + dim; // we want to print dim characters as the output of the cmd
+        int dimErrNewCmd = strlen(cmd) + dim2;
+        if (codeFlag == 1)
+        {
+        	dimOutNewCmd += LOGLAYOUT_CODE;
+        	dimErrNewCmd += LOGLAYOUT_CODE;
+        }
+        else
+        {
+        	dimOutNewCmd += LOGLAYOUT_NOCODE;
+        	dimErrNewCmd += LOGLAYOUT_NOCODE;
+        }
+        logOutLen += dimOutNewCmd;
+        logErrLen += dimErrNewCmd;
+
+        if (logOutLen > logfileLenght || logErrLen > logfileLenght)
+        {
+        	// in this case our idea is to print a sort of menù, to let the user decide between
+        	// starting a new file, overwriting the existing one, or simply exiting.
+        	//showAlert(); // TODO
+        	printf("Log file dimension excedeed.\n\n");
+        }
+
         printf("%s", buf);  // print the output in the shell
 
         //COMMAND
@@ -382,9 +421,7 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		}
 		write(fd[0], SEPARATOR, SEPARATOR_LEN);
 
-		bzero(buf, MAXBUF);
-        dim = read(fdErr,buf,MAXBUF);  // read the stderr in the tmpErr.txt file
-        printf("%s\n", buf);  // print the output in the shell
+        printf("%s\n", buf2);  // print the output in the shell
         //COMMAND
 		write(fd[1], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[1], cmd, strlen(cmd));
@@ -393,14 +430,14 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		write(fd[1], date, strlen(date));
         //COMMAND ERROR OUTPUT
 		write(fd[1], "\n\nERROR OUTPUT:\n\n", strlen("\n\nERROR OUTPUT:\n\n"));
-		write(fd[1], buf, dim);  // write in the out log file
+		write(fd[1], buf2, dim);  // write in the out log file
         //COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
 			// TODO: introduce a new string named returnCode to avoid repeating this instruction twice
-			bzero(buf, MAXBUF);
-			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
-			write(fd[1], buf, dim);
+			bzero(buf2, MAXBUF);
+			dim = sprintf(buf2, "\nRETURN CODE:\t%d\n", errorCode);
+			write(fd[1], buf2, dim);
 		}
 		write(fd[1], SEPARATOR, SEPARATOR_LEN);
 
