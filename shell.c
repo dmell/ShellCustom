@@ -10,7 +10,8 @@
 #include <time.h>
 #define STDOUT 1
 #define CMDSIZE 10
-#define MAXBUF 4096
+#define MAXLOGLEN 4096
+#define MAXBUF 512
 #define SEPARATOR "\n------------------------------------------------\n\n"
 #define SEPARATOR_LEN 51
 #define DATESIZE 32
@@ -22,7 +23,7 @@ char * substring (char * src, int first, int last);
 // handles the commands
 char** parseCommand (char * cmd, int * cmds);
 // execute the commands
-void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag);
+void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght);
 
 int main(int argc, char **argv)
 {
@@ -40,12 +41,14 @@ int main(int argc, char **argv)
 		printf("Usage: ./shell [PARAMETERS]\n");
 		printf("Run the Custom Shell\n\n");
 		printf("Mandatory parameters:\n");
-		printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout\n");
+		printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout\n\n");
 		printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr\n\n");
 		printf("Optional parameters:\n");
 		printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
-		printf("\n\t\t\t\t\t\t(in number of characters) (4096 by default)\n");
+		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n\n", MAXLOGLEN);
 		printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands\n\n");
+		printf("  -s[=NUMBER],--size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
+		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n", MAXBUF);
 		exit(0);
 	}
 
@@ -54,6 +57,7 @@ int main(int argc, char **argv)
 	char *errfile = NULL;  // the name of log errfile
 	// length set to -1 to check if the user has specified a new length, otherwise 4096
 	int logfileLenght = -1;
+	int bufLenght = -1;
 	int code = 0;  // usato come bool per opzione codice uscita
 	for (int i = 1; i < argc; i++)
 	{
@@ -140,10 +144,39 @@ int main(int argc, char **argv)
 			code = 1; // the flag is set to include return code of the commands
 			// N.B.: you can do it multiple times
 		}
+		else if (strncmp(argv[i], "-s=", 3) == 0)  // short buffer lenght
+		{
+			if (bufLenght == -1)  // not set yet
+			{
+				bufLenght = atoi(estrai (argv[i], 3)) + 1; // to hold '\0' at the end
+			}
+			else  // already set, error
+			{
+				printf("shell: buffer length parameter already entered.\n");
+				printf("Try './shell --help' for more information.\n");
+				exit(1);
+			}
+		}
+		else if (strncmp(argv[i], "--size=", 7) == 0)  // long buffer lenght
+		{
+			if (bufLenght == -1)  // not set yet
+			{
+				bufLenght = atoi(estrai (argv[i], 7)) + 1; 
+			}
+			else  // already set, error
+			{
+				printf("shell: buffer length parameter already entered.\n");
+				printf("Try './shell --help' for more information.\n");
+				exit(1);
+			}
+		}
 	}
 
 	if (logfileLenght == -1)  // if the maximum length has not been specified
-		logfileLenght = MAXBUF;  // default
+		logfileLenght = MAXLOGLEN;  // default
+
+	if (bufLenght == -1)
+		bufLenght = MAXBUF;
 
 	// we check that the user has specified the log files
 	if (outfile == NULL || errfile == NULL)
@@ -181,7 +214,7 @@ int main(int argc, char **argv)
 		int cmds=1;  // there's always one command
 		char ** cmd = parseCommand(line, &cmds);
 		int i;
-		run(cmd[0],outfile,errfile, fd, code);  // TODO: pass other parameters like logfileLenght and code
+		run(cmd[0],outfile,errfile, fd, code, bufLenght);  // TODO: pass other parameters like logfileLenght and code
 	}
 
 	// free dynamic allocation of strings
@@ -198,7 +231,7 @@ char** parseCommand (char * cmd, int * cmds)
 {
 	if (strncmp(cmd, "exit", 4) == 0)
 	{
-		printf("Goodbye\n");
+		printf("Goodbye\nP.S.: Damiano ricordati di fare make clean prima di modificare il sorgente\n");
 		exit(0);
 	}
 
@@ -275,7 +308,7 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
+void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght)
 {
 	pid_t pid;
 	int errorCode;
@@ -318,10 +351,16 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
         //INITIALIZING BUFFERS
         char buf[MAXBUF];
         char date[DATESIZE];
-        bzero(buf, MAXBUF); // clean the buffer
+        bzero(buf, MAXBUF); // clean the stdout buffer
         bzero(date, DATESIZE); //clean the date buffer
 
         int dim = read(fdOut,buf,MAXBUF);  // read the output written from the child in tmpOut.txt
+        // N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
+        if (dim > bufLenght)
+        {
+        	printf("The output of the command is too long.\n\n");
+        	return;
+        }
         printf("%s", buf);  // print the output in the shell
 
         //COMMAND
@@ -337,28 +376,29 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
         //COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
+			bzero(buf, MAXBUF); // better clean the buffer every time we need it 
 			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
 			write(fd[0], buf, dim);
 		}
 		write(fd[0], SEPARATOR, SEPARATOR_LEN);
 
 		bzero(buf, MAXBUF);
-        bzero(date, DATESIZE);
         dim = read(fdErr,buf,MAXBUF);  // read the stderr in the tmpErr.txt file
         printf("%s\n", buf);  // print the output in the shell
         //COMMAND
 		write(fd[1], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[1], cmd, strlen(cmd));
         //DATE
-        strftime(date, sizeof(date), "%c", tm);
 		write(fd[1], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
 		write(fd[1], date, strlen(date));
         //COMMAND ERROR OUTPUT
-		write(fd[1], "\n\nERROR OUTPUT:\n", strlen("\n\nERROR OUTPUT:\n"));
+		write(fd[1], "\n\nERROR OUTPUT:\n\n", strlen("\n\nERROR OUTPUT:\n\n"));
 		write(fd[1], buf, dim);  // write in the out log file
         //COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
+			// TODO: introduce a new string named returnCode to avoid repeating this instruction twice
+			bzero(buf, MAXBUF);
 			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", errorCode);
 			write(fd[1], buf, dim);
 		}
@@ -367,5 +407,6 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag)
 		// close file descriptors
 		close(fdOut);
 		close(fdErr);
+
     }
 }
