@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 	if (fd[0] < 0 || fd[1] < 0)
 	{
 		perror("Fail in opening files");
-		exit(1);
+		cExit(1);
 	}
 
 	char *line = NULL;  // stringa dove viene memorizzato il comando inserito dall'utente
