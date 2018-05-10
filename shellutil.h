@@ -14,6 +14,7 @@
 #define LOGLAYOUT_CODE_ERR 126
 #define LOGLAYOUT_NOCODE_OUT 105
 #define LOGLAYOUT_NOCODE_ERR 111
+#define FILENAMELEN 64
 
 /* global variables */
 int logOutLen;
@@ -29,6 +30,8 @@ char * substring (char * src, int first, int last);
 char** parseCommand (char * cmd, int * cmds);
 /* execute the commands */
 void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght);
+/* when the log file dimension exceeds*/
+void dimension(int * fd);
 /* custom exit function */
 void cExit(int code);
 
