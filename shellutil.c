@@ -14,8 +14,7 @@ char** parseCommand (char * cmd, int * cmds)
 {
 	if (strncmp(cmd, "exit", 4) == 0)
 	{
-		printf("Goodbye\nP.S.: Damiano ricordati di fare make clean prima di modificare il sorgente\n");
-		exit(0);
+		cExit(0);
 	}
 
 	// TODO: maybe it would be cool to handle ; and && too
@@ -103,7 +102,7 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
     if (pid < 0)
 	{
         printf("Error forking!\n");
-        exit(1);
+        cExit(1);
     }
     else if (pid == 0) // child
 	{
@@ -226,19 +225,28 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 }
 
 
-// void dimension ()
-// {
-// 	printf("Type:\n");
-// 	printf("\te\texit\n");
-// 	printf("\to\toverwrite the existing file\n");
-// 	printf("\tc\tcreate a new file\n");
-//
-// 	char choice;
-// 	scanf("%c\n", &choice);
-//
-// 	switch (choice) {
-// 		case 'e'||'E':
-// 		case 'o'||'O':
-// 		case 'c'||'C':
-// 	}
-// }
+void dimension ()
+{
+	printf("Type:\n");
+	printf("\te\texit\n");
+	printf("\to\toverwrite the existing file\n");
+	printf("\tc\tcreate a new file\n");
+
+	char choice;
+	scanf("%c\n", &choice);
+
+	switch (choice) {
+		case 'e':
+        case 'E':
+		case 'o':
+        case 'O':
+		case 'c':
+        case 'C':
+	}
+}
+
+void cExit (int code)
+{
+    printf("Goodbye\n");
+    exit(code);
+}
