@@ -95,18 +95,18 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 	pid_t pid;
 	int errorCode;
 	// date and time of the execution
-    time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
+	time_t t = time(NULL);
+	struct tm *tm = localtime(&t);
 	pid = fork();
 
-    if (pid < 0)
+	if (pid < 0)
 	{
-        printf("Error forking!\n");
-        cExit(1);
-    }
-    else if (pid == 0) // child
+		printf("Error forking!\n");
+		cExit(1);
+	}
+	else if (pid == 0) // child
 	{
-	//	printf("Command %s, child process\n", cmd);
+		//	printf("Command %s, child process\n", cmd);
 		/* TODO: decide if it is better to open the temporary logs twice (once in write only
 		and once in read only) or opening them only once.
 		*/
@@ -117,78 +117,75 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		dup2(fdOut,1);  // write the stdout of the command in tmpOut.txt
 		dup2(fdErr,2);  // write the stderr of the command in tmpErr.txt
 
-        errorCode = system(cmd);  // TODO: NB errorcode e' il valore di ritorno della system, non di cmd
+		errorCode = system(cmd);  // TODO: NB errorcode e' il valore di ritorno della system, non di cmd
 		close(fdOut);
 		close(fdErr);
 		exit(0);
-    }
-    else // parent
+	}
+	else // parent
 	{
-        wait(NULL);  // wait for the child
-        //printf("Back to the parent\n");
+		wait(NULL);  // wait for the child
+		//printf("Back to the parent\n");
 
 		int fdOut = open("../src/tmp/tmpOut.txt", O_RDONLY, 0777);
 		int fdErr = open("../src/tmp/tmpErr.txt", O_RDONLY, 0777);
 
-        //INITIALIZING BUFFERS
-        char buf[MAXBUF]; // stdout buff
-        char buf2[MAXBUF]; // stderr buff
-        char date[DATESIZE];
-        bzero(buf, MAXBUF); // clean the stdout buffer
-        bzero(buf2, MAXBUF); // clean the stderr buffer
-        bzero(date, DATESIZE); //clean the date buffer
+		//INITIALIZING BUFFERS
+		char buf[MAXBUF]; // stdout buff
+		char buf2[MAXBUF]; // stderr buff
+		char date[DATESIZE];
+		bzero(buf, MAXBUF); // clean the stdout buffer
+		bzero(buf2, MAXBUF); // clean the stderr buffer
+		bzero(date, DATESIZE); //clean the date buffer
 
-        int dim = read(fdOut,buf,MAXBUF);  // read the output written from the child in tmpOut.txt
-        int dim2 = read(fdErr, buf2, MAXBUF);
-        // N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
-        if (dim > bufLenght)
-        {
-        	printf("The output of the command is too long.\n\n");
-        	return;
-        }
-        int dimOutNewCmd = strlen(cmd) + dim; // we want to print dim characters as the output of the cmd
-        int dimErrNewCmd = strlen(cmd) + dim2;
-        if (codeFlag == 1)
-        {
-        	dimOutNewCmd += LOGLAYOUT_CODE_OUT;
-        	dimErrNewCmd += LOGLAYOUT_CODE_ERR;
-        }
-        else
-        {
-        	dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
-        	dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
-        }
-        logOutLen += dimOutNewCmd;
-        logErrLen += dimErrNewCmd;
+		int dim = read(fdOut,buf,MAXBUF);  // read the output written from the child in tmpOut.txt
+		int dim2 = read(fdErr, buf2, MAXBUF);
+		// N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
+		if (dim > bufLenght)
+		{
+			printf("The output of the command is too long.\n\n");
+			return;
+		}
+		int dimOutNewCmd = strlen(cmd) + dim; // we want to print dim characters as the output of the cmd
+		int dimErrNewCmd = strlen(cmd) + dim2;
+		if (codeFlag == 1)
+		{
+			dimOutNewCmd += LOGLAYOUT_CODE_OUT;
+			dimErrNewCmd += LOGLAYOUT_CODE_ERR;
+		}
+		else
+		{
+			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
+			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
+		}
+		logOutLen += dimOutNewCmd;
+		logErrLen += dimErrNewCmd;
 
 		// log file lenght handling
-        if (logOutLen > logfileLenght)
-        {
-        	// in this case our idea is to print a sort of menù, to let the user decide between
-        	// starting a new file, overwriting the existing one, or simply exiting.
-        	//showAlert(); // TODO
-        	printf("Log file dimension for the stdout excedeed.\n\n");
-			//dimension ();
-        }
+		if (logOutLen > logfileLenght)
+		{
+			printf("Log file dimension for the stdout excedeed.\n\n");
+			dimension (&fd[0]);
+		}
 		if (logErrLen > logfileLenght)
 		{
 			printf("Log file dimension for the stderr excedeed.\n\n");
 
 		}
 
-        printf("%s", buf);  // print the output in the shell
+		printf("%s", buf);  // print the output in the shell
 
-        //COMMAND
-        write(fd[0], "COMMAND:\t", strlen("COMMAND:\t"));
+		//COMMAND
+		write(fd[0], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[0], cmd, strlen(cmd));
 		//DATE
 		strftime(date, sizeof(date), "%c", tm);
 		write(fd[0], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
 		write(fd[0], date, strlen(date));
-        //COMMAND OUTPUT
+		//COMMAND OUTPUT
 		write(fd[0], "\n\nOUTPUT:\n\n", strlen("\n\nOUTPUT:\n\n"));
 		write(fd[0], buf, dim);  // write in the out log file
-        //COMMAND RETURN CODE
+		//COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
 			bzero(buf, MAXBUF); // better clean the buffer every time we need it
@@ -197,17 +194,17 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		}
 		write(fd[0], SEPARATOR, SEPARATOR_LEN);
 
-        printf("%s\n", buf2);  // print the output in the shell
-        //COMMAND
+		printf("%s\n", buf2);  // print the output in the shell
+		//COMMAND
 		write(fd[1], "COMMAND:\t", strlen("COMMAND:\t"));
 		write(fd[1], cmd, strlen(cmd));
-        //DATE
+		//DATE
 		write(fd[1], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
 		write(fd[1], date, strlen(date));
-        //COMMAND ERROR OUTPUT
+		//COMMAND ERROR OUTPUT
 		write(fd[1], "\n\nERROR OUTPUT:\n\n", strlen("\n\nERROR OUTPUT:\n\n"));
 		write(fd[1], buf2, dim2);  // write in the out log file
-        //COMMAND RETURN CODE
+		//COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
 			// TODO: introduce a new string named returnCode to avoid repeating this instruction twice
@@ -221,11 +218,11 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		close(fdOut);
 		close(fdErr);
 
-    }
+	}
 }
 
 
-void dimension ()
+void dimension (int * fd)
 {
 	printf("Type:\n");
 	printf("\te\texit\n");
@@ -233,25 +230,41 @@ void dimension ()
 	printf("\tc\tcreate a new file\n");
 
 	char choice;
-	scanf("%c\n", &choice);
+	do
+	{
+		scanf("%c\n", &choice);
 
-	switch (choice) {
-		case 'e':
-        case 'E':
-            break;
-		case 'o':
-        case 'O':
-            break;
-		case 'c':
-        case 'C':
-            break;
-        default:
-            break;
-	}
+		switch (choice) {
+			case 'e':
+			case 'E':
+				cExit(0);
+				break;
+			case 'o':
+			case 'O':
+				{
+					// TODO
+				}
+				break;
+			case 'c':
+			case 'C':
+				{
+					char name[FILENAMELEN];
+					scanf("New file name: %s\n", name);
+					*fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+				}
+				break;
+			default:
+				{
+					printf("Choice %c not allowed.\n", choice);
+					choice = 'a';
+				}
+				break;
+		}
+	} while (choice == 'a');
 }
 
 void cExit (int code)
 {
-    printf("Goodbye\n");
-    exit(code);
+	printf("Goodbye\n");
+	exit(code);
 }
