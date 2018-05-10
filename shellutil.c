@@ -10,6 +10,22 @@
 #include <time.h>
 #include "shellutil.h"
 
+void showManual()
+{
+	printf("Usage: ./shell [PARAMETERS]\n");
+	printf("Run the Custom Shell\n\n");
+	printf("Mandatory parameters:\n");
+	printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout\n\n");
+	printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr\n\n");
+	printf("Optional parameters:\n");
+	printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
+	printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n\n", DEFAULTLOGLEN);
+	printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands\n\n");
+	printf("  -s[=NUMBER],--size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
+	printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n", MAXBUF);
+	exit(0);
+}
+
 char** parseCommand (char * cmd, int * cmds)
 {
 	if (strncmp(cmd, "exit", 4) == 0)
@@ -227,12 +243,13 @@ void dimension (int * fd)
 	printf("Type:\n");
 	printf("\te\texit\n");
 	printf("\to\toverwrite the existing file\n");
-	printf("\tc\tcreate a new file\n");
+	printf("\tc\tcreate a new file");
 
 	char choice;
 	do
 	{
-		scanf("%c\n", &choice);
+		printf("\n>> ");
+		scanf("%c", &choice);
 
 		switch (choice) {
 			case 'e':

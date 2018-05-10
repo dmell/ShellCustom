@@ -10,7 +10,6 @@
 #include <time.h>
 #include "shellutil.h"
 
-
 int main(int argc, char **argv)
 {
 	// initialization of the global variables
@@ -28,18 +27,7 @@ int main(int argc, char **argv)
 	}
 	if (man)
 	{
-		printf("Usage: ./shell [PARAMETERS]\n");
-		printf("Run the Custom Shell\n\n");
-		printf("Mandatory parameters:\n");
-		printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout\n\n");
-		printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr\n\n");
-		printf("Optional parameters:\n");
-		printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
-		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n\n", DEFAULTLOGLEN);
-		printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands\n\n");
-		printf("  -s[=NUMBER],--size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
-		printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n", MAXBUF);
-		exit(0);
+		showManual();
 	}
 
 	// parameters
@@ -49,78 +37,64 @@ int main(int argc, char **argv)
 	int logfileLenght = -1;
 	int bufLenght = -1;
 	int code = 0;  // usato come bool per opzione codice uscita
+	int shortFlag; // we will use this to handle the double option to gives args
 	for (int i = 1; i < argc; i++)
 	{
-		if (strncmp(argv[i], "-o=", 3) == 0)  // short outfile
+		if (strncmp(argv[i], "-o=", 3) == 0 || strncmp(argv[i], "--outfile=", 10) == 0)  // outfile
 		{
+			shortFlag = strncmp(argv[i], "--outfile=", 10);
 			if (outfile == NULL)  // not set yet
 			{
-				outfile = estrai(argv[i], 3);
+				if (shortFlag)
+				{
+					outfile = estrai(argv[i], 3);
+				}
+				else
+				{
+					outfile = estrai(argv[i], 10);
+				}
 			}
 			else  // already set, error
 			{
 				printf("shell: outfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
-			}
+			}	
 		}
-		else if (strncmp(argv[i], "--outfile=", 10) == 0)  // long outfile
+		else if (strncmp(argv[i], "-e=", 3) == 0 || strncmp(argv[i], "--errfile=", 10) == 0)  // errfile
 		{
-			if (outfile == NULL)  // not set yet
-			{
-				outfile = estrai (argv[i], 10);
-			}
-			else  // already sey, error
-			{
-				printf("shell: outfile parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "-e=", 3) == 0)  // short errfile
-		{
+			shortFlag = strncmp(argv[i], "--errfile=", 10);
 			if (errfile == NULL)  // not set yet
 			{
-				errfile = estrai (argv[i], 3);
+				if (shortFlag)
+				{
+					errfile = estrai (argv[i], 3);
+				}
+				else
+				{
+					errfile = estrai (argv[i], 10);
+				}
 			}
-			else  // already sey, error
+			else  // already set, error
 			{
 				printf("shell: errfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
 			}
 		}
-		else if (strncmp(argv[i], "--errfile=", 10) == 0)  // long errfile
+		else if (strncmp(argv[i], "-m=", 3) == 0 || strncmp(argv[i], "--maxlen=", 9) == 0)  // maxlen
 		{
-			if (errfile == NULL)  // not set yet
-			{
-				errfile = estrai (argv[i], 10);
-			}
-			else  // already sey, error
-			{
-				printf("shell: errfile parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "-m=", 3) == 0)  // short maxlen
-		{
+			shortFlag = strncmp(argv[i], "--maxlen=", 9);
 			if (logfileLenght == -1)  // not set yet
 			{
-				logfileLenght = atoi(estrai (argv[i], 3));
-			}
-			else  // already set, error
-			{
-				printf("shell: maxlen parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "--maxlen=", 9) == 0)  // long maxlen
-		{
-			if (errfile == NULL)  // not set yet
-			{
-				logfileLenght = atoi(estrai (argv[i], 9));
+				if (shortFlag)
+				{
+					logfileLenght = atoi(estrai (argv[i], 3));
+				}
+				else
+				{
+					logfileLenght = atoi(estrai (argv[i], 9));		
+				}
 			}
 			else  // already set, error
 			{
@@ -134,24 +108,19 @@ int main(int argc, char **argv)
 			code = 1; // the flag is set to include return code of the commands
 			// N.B.: you can do it multiple times
 		}
-		else if (strncmp(argv[i], "-s=", 3) == 0)  // short buffer lenght
+		else if (strncmp(argv[i], "-s=", 3) == 0 || strncmp(argv[i], "--size=", 7) == 0)  // buffer lenght
 		{
+			shortFlag = strncmp(argv[i], "--size=", 7);
 			if (bufLenght == -1)  // not set yet
 			{
-				bufLenght = atoi(estrai (argv[i], 3)) + 1; // to hold '\0' at the end
-			}
-			else  // already set, error
-			{
-				printf("shell: buffer length parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "--size=", 7) == 0)  // long buffer lenght
-		{
-			if (bufLenght == -1)  // not set yet
-			{
-				bufLenght = atoi(estrai (argv[i], 7)) + 1;
+				if (shortFlag)
+				{
+					bufLenght = atoi(estrai (argv[i], 3)) + 1; // to hold '\0' at the end
+				}
+				else
+				{
+					bufLenght = atoi(estrai (argv[i], 7)) + 1;
+				}
 			}
 			else  // already set, error
 			{
@@ -190,7 +159,7 @@ int main(int argc, char **argv)
 	if (fd[0] < 0 || fd[1] < 0)
 	{
 		perror("Fail in opening files");
-		cExit(1);
+		exit(1);
 	}
 
 	char *line = NULL;  // stringa dove viene memorizzato il comando inserito dall'utente
@@ -200,7 +169,7 @@ int main(int argc, char **argv)
 
     //Brief description of the Shell
     printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.2 (May 9 2018)\n");
+    printf("v0.3 (May 10 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 

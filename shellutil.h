@@ -22,6 +22,7 @@ int logErrLen;
 
 
 /* definitions of the functions */
+void showManual();
 /* extracts filename in args */
 char * estrai (char *source, int index);
 /* extracts a substring between given indexes */
