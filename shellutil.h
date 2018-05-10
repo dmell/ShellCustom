@@ -29,6 +29,7 @@ char * substring (char * src, int first, int last);
 char** parseCommand (char * cmd, int * cmds);
 /* execute the commands */
 void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght);
-
+/* custom exit function */
+void exit(int code);
 
 #endif
