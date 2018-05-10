@@ -238,10 +238,15 @@ void dimension ()
 	switch (choice) {
 		case 'e':
         case 'E':
+            break;
 		case 'o':
         case 'O':
+            break;
 		case 'c':
         case 'C':
+            break;
+        default:
+            break;
 	}
 }
 
