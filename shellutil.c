@@ -110,6 +110,8 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 {
 	pid_t pid;
 	int errorCode;
+    int maxOutLogLenght = logfileLenght; //Two variables to handle separately the
+    int maxErrLogLenght = logfileLenght; //relative dimension of the log files
 	// date and time of the execution
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
@@ -178,18 +180,22 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		logErrLen += dimErrNewCmd;
 
 		// log file lenght handling
-		if (logOutLen > logfileLenght)
+		if (logOutLen > maxOutLogLenght)
 		{
 			printf("Log file dimension for the stdout excedeed.\n\n");
-			dimension (&fd[0]);
+			dimension (&fd[0], &maxOutLogLenght);
+            logOutLen = dimOutNewCmd;
 		}
-		if (logErrLen > logfileLenght)
+		if (logErrLen > maxErrLogLenght)
 		{
 			printf("Log file dimension for the stderr excedeed.\n\n");
+            dimension (&fd[1], &maxErrLogLenght);
+            logErrLen = dimErrNewCmd;
 
 		}
 
 		printf("%s", buf);  // print the output in the shell
+        //fflush(stdout);
 
 		//COMMAND
 		write(fd[0], "COMMAND:\t", strlen("COMMAND:\t"));
@@ -238,7 +244,7 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 }
 
 
-void dimension (int * fd)
+void dimension (int * fd, int* logLength)
 {
 	printf("Type:\n");
 	printf("\te\texit\n");
@@ -248,7 +254,7 @@ void dimension (int * fd)
 	char choice;
 	do
 	{
-		printf("\n>> ");
+		printf("\n\t>> ");
 		scanf("%c", &choice);
 
 		switch (choice) {
@@ -265,8 +271,17 @@ void dimension (int * fd)
 			case 'c':
 			case 'C':
 				{
+                    close(*fd);
 					char name[FILENAMELEN];
-					scanf("New file name: %s\n", name);
+                    printf("New file name: ");
+					scanf("%s", &name);
+                    int tempLogLenght = -1;
+                    do {
+                        printf("New log lenght dimension: ");
+                        scanf("%d", &tempLogLenght);
+                    } while (tempLogLenght < MINLOGLEN); //TODO: if the user
+                            //has been born from the ass, this might crash
+                    *logLength = tempLogLenght;
 					*fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 				}
 				break;

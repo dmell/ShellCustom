@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 				printf("shell: outfile parameter already entered.\n");
 				printf("Try './shell --help' for more information.\n");
 				exit(1);
-			}	
+			}
 		}
 		else if (strncmp(argv[i], "-e=", 3) == 0 || strncmp(argv[i], "--errfile=", 10) == 0)  // errfile
 		{
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 				}
 				else
 				{
-					logfileLenght = atoi(estrai (argv[i], 9));		
+					logfileLenght = atoi(estrai (argv[i], 9));
 				}
 			}
 			else  // already set, error
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 		int cmds=1;  // there's always one command
 		char ** cmd = parseCommand(line, &cmds);
 		int i;
-		run(cmd[0],outfile,errfile, fd, code, bufLenght, logfileLenght);
+		run(cmd[0], outfile, errfile, fd, code, bufLenght, logfileLenght);
 	}
 
 	// free dynamic allocation of strings

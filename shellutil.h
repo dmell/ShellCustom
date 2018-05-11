@@ -6,7 +6,7 @@
 #define CMDSIZE 10
 #define DEFAULTLOGLEN 4096
 #define MINLOGLEN 512
-#define MAXBUF 512
+#define MAXBUF 4096
 #define SEPARATOR "\n------------------------------------------------\n\n"
 #define SEPARATOR_LEN 51
 #define DATESIZE 32
@@ -32,7 +32,7 @@ char** parseCommand (char * cmd, int * cmds);
 /* execute the commands */
 void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght);
 /* when the log file dimension exceeds*/
-void dimension(int * fd);
+void dimension(int * fd, int *);
 /* custom exit function */
 void cExit(int code);
 
