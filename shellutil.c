@@ -274,7 +274,7 @@ void dimension (int * fd, int* logLength)
                     close(*fd);
 					char name[FILENAMELEN];
                     printf("New file name: ");
-					scanf("%s", &name);
+					scanf("%s", name);
                     int tempLogLenght = -1;
                     do {
                         printf("New log lenght dimension: ");
