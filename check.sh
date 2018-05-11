@@ -1,6 +1,6 @@
 cd bin/
-echo Out log
+printf "\n\n@@@@@@@@@@@@@@@@@@ Out log @@@@@@@@@@@@@@@@@@@@@\n\n"
 cat out.txt
-echo Err log
+printf "\n\n@@@@@@@@@@@@@@@@@@ Err log @@@@@@@@@@@@@@@@@@@@@\n\n"
 cat err.txt
 cd ..
