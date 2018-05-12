@@ -151,7 +151,7 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		close(fdIPC_err[READ]);
 		dup2(fdIPC_out[WRITE], 1);
 		dup2(fdIPC_err[WRITE], 2);
-	    execvp(cmdSplitted[0], cmdSplitted);
+	    	execvp(cmdSplitted[0], cmdSplitted);
 		/*close(fdOut);
 		close(fdErr);
 		exit(0);*/
