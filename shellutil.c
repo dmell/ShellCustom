@@ -118,7 +118,7 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
 
-	// the idea is to make the two processes comunicate with a pipe, in order to send the 
+	// the idea is to make the two processes comunicate with a pipe, in order to send the
 	// output of the command to the parent and make it print.
 	int fdIPC_out[2];
 	int fdIPC_err[2];
@@ -151,8 +151,8 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		close(fdIPC_err[READ]);
 		dup2(fdIPC_out[WRITE], 1);
 		dup2(fdIPC_err[WRITE], 2);
-
-		execvp(cmdSplitted[0], cmdSplitted);
+		execvp(cmd, cmdSplitted);
+		// execvp(cmdSplitted[0], cmdSplitted);
 		/*close(fdOut);
 		close(fdErr);
 		exit(0);*/
@@ -261,7 +261,6 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		// close file descriptors
 		close(fdIPC_out[READ]);
 		close(fdIPC_err[READ]);
-
 	}
 }
 
@@ -339,5 +338,6 @@ char ** splitArgs (char * cmd)
 		nextToken = strtok(NULL, " ");
 		i++;
 	}
+	cleancmd[i] = NULL;
 	return cleancmd;
 }
