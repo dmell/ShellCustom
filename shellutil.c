@@ -151,7 +151,14 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		close(fdIPC_err[READ]);
 		dup2(fdIPC_out[WRITE], 1);
 		dup2(fdIPC_err[WRITE], 2);
-	    	execvp(cmdSplitted[0], cmdSplitted);
+		int execError = execvp(cmdSplitted[0], cmdSplitted);
+		int commandError = errno;  // NB errno is not setted as the error of the command
+								   // but is setted as a symbolic error based on the error type of the execvp
+		if (execError == -1)
+		{
+			fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
+			exit(commandError);
+		}
 		/*close(fdOut);
 		close(fdErr);
 		exit(0);*/
