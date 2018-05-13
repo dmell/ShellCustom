@@ -209,11 +209,10 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 			printf("Log file dimension for the stderr excedeed.\n\n");
             dimension (&fd[1], &maxErrLogLenght);
             logErrLen = dimErrNewCmd;
-
 		}
 
 		printf("%s", buf);  // print the stdout in the shell
-		printf("%s", buf2);  // print the stderr in the shell
+		printf("%s\n", buf2);  // print the stderr in the shell
 
 		// we convert the file descriptor into a stream in order to format the output
 		FILE * outLog = fdopen(fd[0], "w");
@@ -280,7 +279,13 @@ void dimension (int * fd, int* logLength)
 			case 'o':
 			case 'O':
 				{
-					// TODO
+					// ftruncate truncates the file at specified lenght. In this way we reset it
+					int err = ftruncate(*fd, 0);
+					if (err < 0)
+					{
+						printf("Failed in overwriting the file\n");
+						exit(0);
+					}
 				}
 				break;
 			case 'c':
@@ -298,6 +303,11 @@ void dimension (int * fd, int* logLength)
                             //has been born from the ass, this might crash
                     *logLength = tempLogLenght;
 					*fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+					if (*fd < 0)
+					{
+						printf("Failed in opening new file\n");
+						exit(0);
+					}
 				}
 				break;
 			default:
