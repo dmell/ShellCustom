@@ -167,9 +167,12 @@ int main(int argc, char **argv)
 	ssize_t read = 0;  // numero di caratteri letti (valore di ritorno di getlineq)
 	int error;  // codice di errore dell'esecuzione del comando (valore di ritorno di system)
 
+	char ** cmd; // in every position there is a string containing a command and its arguments.
+	int cmds=1;  // there's always one command
+
     //Brief description of the Shell
     printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.3 (May 10 2018)\n");
+    printf("v0.4 (May 13 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 
@@ -177,9 +180,7 @@ int main(int argc, char **argv)
 		fprintf(stdout, ">> ");
 		fflush(stdout);
 		read = getline(&line, &len, stdin);
-		int cmds=1;  // there's always one command
-		char ** cmd = parseCommand(line, &cmds);
-		int i;
+		cmd = parseCommand(line, &cmds);
 		run(cmd[0], outfile, errfile, fd, code, bufLenght, logfileLenght);
 	}
 
@@ -188,6 +189,11 @@ int main(int argc, char **argv)
 	free(outfile);
 	free(errfile);
 	// TODO: free cmd
+	for (int i = 0; i < cmds; i++)
+	{
+		free(cmd[i]);
+	}
+	free(cmd);
 	close(fd[0]);
 	close(fd[1]);
 	return 0;

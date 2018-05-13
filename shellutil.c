@@ -112,8 +112,8 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 {
 	pid_t pid;
 	int returnCode;
-    int maxOutLogLenght = logfileLenght; //Two variables to handle separately the
-    int maxErrLogLenght = logfileLenght; //relative dimension of the log files
+    int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
+    int maxErrLogLenght = logfileLenght; // relative dimension of the log files
 	// date and time of the execution
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
@@ -138,15 +138,6 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 	else if (pid == 0) // child
 	{
 		//	printf("Command %s, child process\n", cmd);
-		/* TODO: decide if it is better to open the temporary logs twice (once in write only
-		and once in read only) or opening them only once.
-		*/
-		/*int fdOut = open("../src/tmp/tmpOut.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
-		int fdErr = open("../src/tmp/tmpErr.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
-
-		// dup2 is counterintuitive: the output of the second fd goes to the first
-		dup2(fdOut,1);  // write the stdout of the command in tmpOut.txt
-		dup2(fdErr,2);  // write the stderr of the command in tmpErr.txt */
 		close(fdIPC_out[READ]); // child doesn't read
 		close(fdIPC_err[READ]);
 		dup2(fdIPC_out[WRITE], 1);
@@ -154,22 +145,16 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		int execError = execvp(cmdSplitted[0], cmdSplitted);
 		int commandError = errno;  // NB errno is not setted as the error of the command
 								   // but is setted as a symbolic error based on the error type of the execvp
+		// entra sempre qui e la stringa è sbagliata, c'è qualcosa che non torna
 		if (execError == -1)
 		{
 			fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
 			exit(commandError);
 		}
-		/*close(fdOut);
-		close(fdErr);
-		exit(0);*/
 	}
 	else // parent
 	{
-		/*wait(NULL);  // wait for the child
 		//printf("Back to the parent\n");
-
-		int fdOut = open("../src/tmp/tmpOut.txt", O_RDONLY, 0777);
-		int fdErr = open("../src/tmp/tmpErr.txt", O_RDONLY, 0777); */
 		int returnCode;
 		wait(&returnCode);
 		returnCode = WEXITSTATUS(returnCode);
@@ -186,6 +171,11 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 
 		int dim = read(fdIPC_out[READ], buf, MAXBUF);  // read the output written from the child in pipe
 		int dim2 = read(fdIPC_err[READ], buf2, MAXBUF);
+
+		// close file descriptors, we don't need to communicate with the child anymore
+		close(fdIPC_out[READ]);
+		close(fdIPC_err[READ]);
+
 		// N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
 		if (dim > bufLenght)
 		{
@@ -222,51 +212,49 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 
 		}
 
-		printf("%s", buf);  // print the output in the shell
-        //fflush(stdout);
+		printf("%s", buf);  // print the stdout in the shell
+		printf("%s", buf2);  // print the stderr in the shell
 
+		// we convert the file descriptor into a stream in order to format the output
+		FILE * outLog = fdopen(fd[0], "w");
+		FILE * errLog = fdopen(fd[1], "w");
+
+		// STDOUT LOG
 		//COMMAND
-		write(fd[0], "COMMAND:\t", strlen("COMMAND:\t"));
-		write(fd[0], cmd, strlen(cmd));
+		fprintf(outLog, "COMMAND:\t%s", cmd);
 		//DATE
 		strftime(date, sizeof(date), "%c", tm);
-		write(fd[0], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
-		write(fd[0], date, strlen(date));
+		fprintf(outLog, "\n\nDATE:\t\t%s", date);
 		//COMMAND OUTPUT
-		write(fd[0], "\n\nOUTPUT:\n\n", strlen("\n\nOUTPUT:\n\n"));
-		write(fd[0], buf, dim);  // write in the out log file
+		fprintf(outLog, "\n\nOUTPUT:\n\n%s", buf);
 		//COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
-			bzero(buf, MAXBUF); // better clean the buffer every time we need it
-			dim = sprintf(buf, "\nRETURN CODE:\t%d\n", returnCode);
-			write(fd[0], buf, dim);
+			fprintf(outLog, "\nRETURN CODE:\t%d\n", returnCode);
 		}
-		write(fd[0], SEPARATOR, SEPARATOR_LEN);
+		fprintf(outLog, SEPARATOR);
+		fflush(outLog);
 
-		printf("%s\n", buf2);  // print the output in the shell
+		// STDERR LOG
 		//COMMAND
-		write(fd[1], "COMMAND:\t", strlen("COMMAND:\t"));
-		write(fd[1], cmd, strlen(cmd));
+		fprintf(errLog, "COMMAND:\t%s", cmd);
 		//DATE
-		write(fd[1], "\n\nDATE:\t\t", strlen("\n\nDATE:\t\t"));
-		write(fd[1], date, strlen(date));
+		fprintf(errLog, "\n\nDATE:\t\t%s", date);
 		//COMMAND ERROR OUTPUT
-		write(fd[1], "\n\nERROR OUTPUT:\n\n", strlen("\n\nERROR OUTPUT:\n\n"));
-		write(fd[1], buf2, dim2);  // write in the out log file
+		fprintf(errLog, "\n\nERROR OUTPUT:\n\n%s", buf2);
 		//COMMAND RETURN CODE
 		if (codeFlag == 1)
 		{
-			// TODO: introduce a new string named returnCode to avoid repeating this instruction twice
-			bzero(buf2, MAXBUF);
-			dim = sprintf(buf2, "\nRETURN CODE:\t%d\n", returnCode);
-			write(fd[1], buf2, dim);
+			fprintf(errLog, "\nRETURN CODE:\t%d\n", returnCode);
 		}
-		write(fd[1], SEPARATOR, SEPARATOR_LEN);
+		fprintf(errLog, SEPARATOR);
+		fflush(errLog);
 
-		// close file descriptors
-		close(fdIPC_out[READ]);
-		close(fdIPC_err[READ]);
+		// NO, because fclose closes the file descriptor too (consequently seg fault)
+		//fclose(outLog);
+		//fclose(errLog);
+
+		//TODO: free cmdSplitted
 	}
 }
 
@@ -328,9 +316,12 @@ void cExit (int code)
 	exit(code);
 }
 
-char ** splitArgs (char * cmd)
+char ** splitArgs (const char * cmd)
 {
-	char * nextToken = strtok(cmd, " ");
+	// tmp is used because after this function the string changes
+	char tmp [strlen(cmd)];
+	strcpy(tmp, cmd);
+	char * nextToken = strtok(tmp, " ");
 	char ** cleancmd = malloc((CMDSIZE/2)*(sizeof(char *)));
 	int i;
 	for (i = 0; i < CMDSIZE/2; i++)
@@ -340,7 +331,7 @@ char ** splitArgs (char * cmd)
 	i = 0;
 	while (nextToken != NULL)
 	{
-		cleancmd[i] = nextToken;
+		strcpy(cleancmd[i],nextToken);
 		nextToken = strtok(NULL, " ");
 		i++;
 	}
