@@ -180,6 +180,10 @@ int main(int argc, char **argv)
 		fprintf(stdout, ">> ");
 		fflush(stdout);
 		read = getline(&line, &len, stdin);
+		if (strcmp(line, "\n") == 0)  // avoid to execute null command in case of empty line
+		{
+			continue;
+		}
 		cmd = parseCommand(line, &cmds);
 		run(cmd[0], outfile, errfile, fd, code, bufLenght, logfileLenght);
 	}

@@ -14,7 +14,6 @@
 #define LOGLAYOUT_CODE_ERR 126
 #define LOGLAYOUT_NOCODE_OUT 105
 #define LOGLAYOUT_NOCODE_ERR 111
-#define FILENAMELEN 64
 
 /* global variables */
 int logOutLen;

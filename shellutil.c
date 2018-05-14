@@ -265,13 +265,22 @@ void dimension (int * fd, int* logLength)
 	printf("\to\toverwrite the existing file\n");
 	printf("\tc\tcreate a new file");
 
+	// for getline
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t read = 0;
+
 	char choice;
 	do
 	{
 		printf("\n\t>> ");
-		scanf("%c", &choice);
+		read = getline(&line, &len, stdin);
+		if (read != 2)
+		{
+			line[0] = 'a';  // 'a' represents invalid input
+		}
 
-		switch (choice) {
+		switch (line[0]) {
 			case 'e':
 			case 'E':
 				cExit(0);
@@ -284,7 +293,7 @@ void dimension (int * fd, int* logLength)
 					if (err < 0)
 					{
 						printf("Failed in overwriting the file\n");
-						exit(0);
+						exit(1);
 					}
 				}
 				break;
@@ -292,13 +301,21 @@ void dimension (int * fd, int* logLength)
 			case 'C':
 				{
                     close(*fd);
-					char name[FILENAMELEN];
+					char *name = NULL;
+					char *inputLen = NULL;
                     printf("New file name: ");
-					scanf("%s", name);
+					read = getline(&name, &len, stdin);
+					name = substring(name, 0, read-2); // delete last character \n
                     int tempLogLenght = -1;
                     do {
                         printf("New log lenght dimension: ");
-                        scanf("%d", &tempLogLenght);
+						read = getline(&inputLen, &len, stdin);
+						tempLogLenght = atoi(inputLen);
+
+						if (tempLogLenght < MINLOGLEN)
+						{
+							printf("Log lenght dimension is too short. Minimum allowed size: %d\n", MINLOGLEN);
+						}
                     } while (tempLogLenght < MINLOGLEN); //TODO: if the user
                             //has been born from the ass, this might crash
                     *logLength = tempLogLenght;
@@ -306,7 +323,7 @@ void dimension (int * fd, int* logLength)
 					if (*fd < 0)
 					{
 						printf("Failed in opening new file\n");
-						exit(0);
+						exit(1);
 					}
 				}
 				break;
@@ -317,7 +334,7 @@ void dimension (int * fd, int* logLength)
 				}
 				break;
 		}
-	} while (choice == 'a');
+	} while (line[0] == 'a');
 }
 
 void cExit (int code)
