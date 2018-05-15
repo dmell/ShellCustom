@@ -180,6 +180,7 @@ int main(int argc, char **argv)
 		fprintf(stdout, ">> ");
 		fflush(stdout);
 		read = getline(&line, &len, stdin);
+        //TODO: function to check if the users entered an empty line
 		if (strcmp(line, "\n") == 0)  // avoid to execute null command in case of empty line
 		{
 			continue;
@@ -192,13 +193,15 @@ int main(int argc, char **argv)
 	free(line);
 	free(outfile);
 	free(errfile);
-	// TODO: free cmd
+
 	for (int i = 0; i < cmds; i++)
 	{
 		free(cmd[i]);
 	}
 	free(cmd);
+
 	close(fd[0]);
 	close(fd[1]);
+
 	return 0;
 }

@@ -21,10 +21,10 @@ void showManual()
 	printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr\n\n");
 	printf("Optional parameters:\n");
 	printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
-	printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n\n", DEFAULTLOGLEN);
+	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default)\n\n", DEFAULTLOGLEN);
 	printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands\n\n");
-	printf("  -s[=NUMBER],--size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
-	printf("\n\t\t\t\t\t\t(in number of characters) (%d by default)\n", MAXBUF);
+	printf("  -s[=NUMBER], --size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
+	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default)\n", MAXBUF);
 	exit(0);
 }
 
@@ -253,7 +253,11 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
 		//fclose(outLog);
 		//fclose(errLog);
 
-		//TODO: free cmdSplitted
+        for (int i = 0; i < CMDSIZE/2; i++)
+    	{
+    		free(cmdSplitted[i]);
+    	}
+    	free(cmdSplitted);
 	}
 }
 
