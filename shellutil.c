@@ -108,7 +108,7 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char ** cmd, const int cmds, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght)
+void run (char ** cmd, const int cmds, char * outfile, char * errfile, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght)
 {
     for(int i = 0; i < cmds; i++)
     {
@@ -204,20 +204,23 @@ void run (char ** cmd, const int cmds, char * outfile, char * errfile, int * fd,
     			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
     			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
     		}
-    		logOutLen += dimOutNewCmd;
-    		logErrLen += dimErrNewCmd;
+    		printf("logOutLen: %d\nlogErrLen: %d\n", logOutLen, logErrLen);
+    		/* Invece che tenere una variabile globale con la lunghezza dei file di log, calcoliamo
+    		tramite la syscall lseek dove siamo arrivati, e vediamo se ci sta il nuovo comando */
+    		logOutLen = dimOutNewCmd;
+    		logErrLen = dimErrNewCmd;
 
     		// log file lenght handling
     		if (logOutLen > maxOutLogLenght)
     		{
     			printf("Log file dimension for the stdout excedeed.\n\n");
-    			dimension (&fd[0], &maxOutLogLenght);
+    			dimension (fd[0], &maxOutLogLenght);
                 logOutLen = dimOutNewCmd;
     		}
     		if (logErrLen > maxErrLogLenght)
     		{
     			printf("Log file dimension for the stderr excedeed.\n\n");
-                dimension (&fd[1], &maxErrLogLenght);
+                dimension (fd[1], &maxErrLogLenght);
                 logErrLen = dimErrNewCmd;
     		}
 
@@ -227,56 +230,50 @@ void run (char ** cmd, const int cmds, char * outfile, char * errfile, int * fd,
     	        printf("%s\n", buf2);  // print the stderr in the shell
             }
 
-    		// we convert the file descriptor into a stream in order to format the output
-    		FILE * outLog = fdopen(fd[0], "w");
-    		FILE * errLog = fdopen(fd[1], "w");
-
     		// STDOUT LOG
     		//COMMAND
-    		fprintf(outLog, "COMMAND:\t%s", cmd[i]);
+    		fprintf(fd[0], "COMMAND:\t%s", cmd[i]);
     		//DATE
     		strftime(date, sizeof(date), "%c", tm);
-    		fprintf(outLog, "\n\nDATE:\t\t%s", date);
+    		fprintf(fd[0], "\n\nDATE:\t\t%s", date);
     		//COMMAND OUTPUT
-    		fprintf(outLog, "\n\nOUTPUT:\n\n%s", buf);
+    		fprintf(fd[0], "\n\nOUTPUT:\n\n%s", buf);
     		//COMMAND RETURN CODE
     		if (codeFlag == 1)
     		{
-    			fprintf(outLog, "\nRETURN CODE:\t%d\n", returnCode);
+    			fprintf(fd[0], "\nRETURN CODE:\t%d\n", returnCode);
     		}
-    		fprintf(outLog, SEPARATOR);
-    		fflush(outLog);
+    		fprintf(fd[0], SEPARATOR);
+    		fflush(fd[0]);
 
     		// STDERR LOG
     		//COMMAND
-    		fprintf(errLog, "COMMAND:\t%s", cmd[i]);
+    		fprintf(fd[1], "COMMAND:\t%s", cmd[i]);
     		//DATE
-    		fprintf(errLog, "\n\nDATE:\t\t%s", date);
+    		fprintf(fd[1], "\n\nDATE:\t\t%s", date);
     		//COMMAND ERROR OUTPUT
-    		fprintf(errLog, "\n\nERROR OUTPUT:\n\n%s", buf2);
+    		fprintf(fd[1], "\n\nERROR OUTPUT:\n\n%s", buf2);
     		//COMMAND RETURN CODE
     		if (codeFlag == 1)
     		{
-    			fprintf(errLog, "\nRETURN CODE:\t%d\n", returnCode);
+    			fprintf(fd[1], "\nRETURN CODE:\t%d\n", returnCode);
     		}
-    		fprintf(errLog, SEPARATOR);
-    		fflush(errLog);
+    		fprintf(fd[1], SEPARATOR);
+    		fflush(fd[1]);
         }
-		// NO, because fclose closes the file descriptor too (consequently seg fault)
-		//fclose(outLog);
-		//fclose(errLog);
 
         for (int i = 0; i < CMDSIZE/2; i++)
     	{
     		free(cmdSplitted[i]);
     	}
     	free(cmdSplitted);
+    	printf("Out log dimension: %d\nErr Log dimension: %d\n", logOutLen, logErrLen);
 	}
 	return;
 }
 
 
-void dimension (int * fd, int* logLength)
+void dimension (FILE * fd, int* logLength)
 {
 	printf("Type:\n");
 	printf("\te\texit\n");
@@ -307,7 +304,8 @@ void dimension (int * fd, int* logLength)
 			case 'O':
 				{
 					// ftruncate truncates the file at specified lenght. In this way we reset it
-					int err = ftruncate(*fd, 0);
+					// fileno return the file descriptor of a FILE*
+					int err = ftruncate(fileno(fd), 0);
 					if (err < 0)
 					{
 						printf("Failed in overwriting the file\n");
@@ -318,7 +316,7 @@ void dimension (int * fd, int* logLength)
 			case 'c':
 			case 'C':
 				{
-                    close(*fd);
+                    fclose(fd);
 					char *name = NULL;
 					char *inputLen = NULL;
                     printf("New file name: ");
@@ -337,10 +335,10 @@ void dimension (int * fd, int* logLength)
                     } while (tempLogLenght < MINLOGLEN); //TODO: if the user
                             //has been born from the ass, this might crash
                     *logLength = tempLogLenght;
-					*fd = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-					if (*fd < 0)
+					fd = fopen(name, "w");
+					if (fd == NULL)
 					{
-						printf("Failed in opening new file\n");
+						perror("fopen");
 						exit(1);
 					}
 				}

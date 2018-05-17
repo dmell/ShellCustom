@@ -152,13 +152,13 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	int fd[2];
-	fd[0] = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-	fd[1] = open(errfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+	FILE * fd[2];
+	fd[0] = fopen(outfile, "w");
+	fd[1] = fopen(errfile, "w");
 
-	if (fd[0] < 0 || fd[1] < 0)
+	if (fd[0] == NULL || fd[1] == NULL)
 	{
-		perror("Fail in opening files");
+		perror("fopen");
 		exit(1);
 	}
 
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 
     //Brief description of the Shell
     printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.4 (May 13 2018)\n");
+    printf("v0.69 (May 17 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 
@@ -210,8 +210,11 @@ int main(int argc, char **argv)
 	}
 	free(cmd);
 
-	close(fd[0]);
-	close(fd[1]);
+	if (fclose(fd[0]) && fclose(fd[1]))
+	{
+		perror("fclose");
+		exit(1);
+	}
 
 	return 0;
 }
