@@ -33,7 +33,7 @@ char ** splitArgs (const char * cmd);
 /* execute the commands */
 void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght);
 /* when the log file dimension exceeds*/
-void dimension(FILE * fd, int *);
+char * dimension(FILE * fd, int *);
 /* custom exit function */
 void cExit(int code);
 

@@ -146,15 +146,12 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		dup2(fdIPC_out[WRITE], 1);
     		dup2(fdIPC_err[WRITE], 2);
 
-    		int execError = execvp(cmdSplitted[0], cmdSplitted);
-    		int commandError = errno;  // NB errno is not setted as the error of the command
-    								   // but is setted as a symbolic error based on the error type of the execvp
-    		// entra sempre qui e la stringa è sbagliata, c'è qualcosa che non torna
-    		if (execError == -1)
-    		{
-    			fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
-    			exit(commandError);
-    		}
+    		execvp(cmdSplitted[0], cmdSplitted);
+    		// the following lines will be executed only if the exec has failed
+    		int commandError = errno;
+    		//fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
+    		write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
+    		exit(commandError);
     	}
     	else // parent
     	{
@@ -179,13 +176,13 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 			if (i != cmds-1)  // if this is not the last command we send the output to the next command
 			{
 				write(fdIPC_out[WRITE], buf, dim);
-				close(fdIPC_out[WRITE]);
 				dup2(fdIPC_out[READ],0);
 			}
 			else
 			{
 				dup2(in_restore,0);
 			}
+			close(fdIPC_out[WRITE]);
 
     		// close file descriptors, we don't need to communicate with the child anymore
     		close(fdIPC_out[READ]);
@@ -209,18 +206,25 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
     			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
     		}
-    		/* Invece che tenere una variabile globale con la lunghezza dei file di log, calcoliamo
-    		tramite la syscall lseek dove siamo arrivati, e vediamo se ci sta il nuovo comando */
+
     		logOutLen += dimOutNewCmd;
     		logErrLen += dimErrNewCmd;
+
 
     		// log file lenght handling
     		if (logOutLen > maxOutLogLenght)
     		{
-				printf("Previous fd: %p\n", fd[0]);
     			printf("Log file dimension for the stdout excedeed.\n\n");
-    			dimension (fd[0], &maxOutLogLenght);
-				printf("New fd: %p\n", fd[0]);
+    			char * newfilename = dimension (fd[0], &maxOutLogLenght);
+    			if (newfilename != NULL)
+    			{
+    				fclose(fd[0]);
+    				fd[0] = fopen(newfilename, "w");
+    				if (fd[0] == NULL)
+    				{
+    					perror("Opening new file");
+    				}
+    			}
                 logOutLen = dimOutNewCmd;
     		}
     		if (logErrLen > maxErrLogLenght)
@@ -278,7 +282,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 }
 
 
-void dimension (FILE * fd, int* logLength)
+char * dimension (FILE * fd, int* logLength)
 {
 	printf("Type:\n");
 	printf("\te\texit\n");
@@ -289,6 +293,8 @@ void dimension (FILE * fd, int* logLength)
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t read = 0;
+
+	char *name = NULL; // used only if the user chooses to create a new file
 
 	char choice;
 	do
@@ -321,8 +327,6 @@ void dimension (FILE * fd, int* logLength)
 			case 'c':
 			case 'C':
 				{
-                    fclose(fd);
-					char *name = NULL;
 					char *inputLen = NULL;
                     printf("New file name: ");
 					read = getline(&name, &len, stdin);
@@ -340,13 +344,6 @@ void dimension (FILE * fd, int* logLength)
                     } while (tempLogLenght < MINLOGLEN); //TODO: if the user
                             //has been born from the ass, this might crash
                     *logLength = tempLogLenght;
-					FILE * newfp = fopen(name, "w");
-					if (newfp == NULL)
-					{
-						perror("fopen");
-						exit(1);
-					}
-					fd = newfp;
 				}
 				break;
 			default:
@@ -357,6 +354,8 @@ void dimension (FILE * fd, int* logLength)
 				break;
 		}
 	} while (line[0] == 'a');
+
+	return name;
 }
 
 void cExit (int code)
