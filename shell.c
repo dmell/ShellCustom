@@ -186,7 +186,17 @@ int main(int argc, char **argv)
 			continue;
 		}
 		cmd = parseCommand(line, &cmds);
-		run(cmd[0], outfile, errfile, fd, code, bufLenght, logfileLenght);
+		pid_t pid = fork();
+		if (pid==0)
+		{
+			run(cmd, cmds, outfile, errfile, fd, code, bufLenght, logfileLenght);
+			exit(0);
+		}
+		else
+		{
+			wait(NULL);
+			cmds = 1;
+		}
 	}
 
 	// free dynamic allocation of strings

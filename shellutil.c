@@ -108,147 +108,160 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght)
+void run (char ** cmd, const int cmds, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght)
 {
-	pid_t pid;
-	int returnCode;
-    int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
-    int maxErrLogLenght = logfileLenght; // relative dimension of the log files
-	// date and time of the execution
-	time_t t = time(NULL);
-	struct tm *tm = localtime(&t);
+    for(int i = 0; i < cmds; i++)
+    {
+    	pid_t pid;
+    	int returnCode;
+        int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
+        int maxErrLogLenght = logfileLenght; // relative dimension of the log files
+    	// date and time of the execution
+    	time_t t = time(NULL);
+    	struct tm *tm = localtime(&t);
 
-	// the idea is to make the two processes comunicate with a pipe, in order to send the
-	// output of the command to the parent and make it print.
-	int fdIPC_out[2];
-	int fdIPC_err[2];
-	pipe(fdIPC_out);
-	pipe(fdIPC_err);
+    	// the idea is to make the two processes comunicate with a pipe, in order to send the
+    	// output of the command to the parent and make it print.
+    	int fdIPC_out[2];
+    	int fdIPC_err[2];
+    	pipe(fdIPC_out);
+    	pipe(fdIPC_err);
 
-	// we use the function to create an array of strings
-	char ** cmdSplitted = splitArgs(cmd);
+    	// we use the function to create an array of strings
+    	char ** cmdSplitted = splitArgs(cmd[i]);
 
-	pid = fork();
+    	pid = fork();
 
-	if (pid < 0)
-	{
-		printf("Error forking!\n");
-		exit(1);
-	}
-	else if (pid == 0) // child
-	{
-		//	printf("Command %s, child process\n", cmd);
-		close(fdIPC_out[READ]); // child doesn't read
-		close(fdIPC_err[READ]);
-		dup2(fdIPC_out[WRITE], 1);
-		dup2(fdIPC_err[WRITE], 2);
-		int execError = execvp(cmdSplitted[0], cmdSplitted);
-		int commandError = errno;  // NB errno is not setted as the error of the command
-								   // but is setted as a symbolic error based on the error type of the execvp
-		// entra sempre qui e la stringa è sbagliata, c'è qualcosa che non torna
-		if (execError == -1)
-		{
-			fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
-			exit(commandError);
-		}
-	}
-	else // parent
-	{
-		//printf("Back to the parent\n");
-		int returnCode;
-		wait(&returnCode);
-		returnCode = WEXITSTATUS(returnCode);
-		close(fdIPC_out[WRITE]); // parent doesn't write
-		close(fdIPC_err[WRITE]);
+    	if (pid < 0)
+    	{
+    		printf("Error forking!\n");
+    		exit(1);
+    	}
+    	else if (pid == 0) // child
+    	{
+    		//	printf("Command %s, child process\n", cmd);
+    		close(fdIPC_out[READ]); // child doesn't read
+    		close(fdIPC_err[READ]);
+    		dup2(fdIPC_out[WRITE], 1);
+    		dup2(fdIPC_err[WRITE], 2);
 
-		//INITIALIZING BUFFERS
-		char buf[MAXBUF]; // stdout buff
-		char buf2[MAXBUF]; // stderr buff
-		char date[DATESIZE];
-		bzero(buf, MAXBUF); // clean the stdout buffer
-		bzero(buf2, MAXBUF); // clean the stderr buffer
-		bzero(date, DATESIZE); //clean the date buffer
+    		int execError = execvp(cmdSplitted[0], cmdSplitted);
+    		int commandError = errno;  // NB errno is not setted as the error of the command
+    								   // but is setted as a symbolic error based on the error type of the execvp
+    		// entra sempre qui e la stringa è sbagliata, c'è qualcosa che non torna
+    		if (execError == -1)
+    		{
+    			fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
+    			exit(commandError);
+    		}
+    	}
+    	else // parent
+    	{
+    		//printf("Back to the parent\n");
 
-		int dim = read(fdIPC_out[READ], buf, MAXBUF);  // read the output written from the child in pipe
-		int dim2 = read(fdIPC_err[READ], buf2, MAXBUF);
+    		int returnCode;
+    		wait(&returnCode);
+    		returnCode = WEXITSTATUS(returnCode);
+    		close(fdIPC_err[WRITE]);
 
-		// close file descriptors, we don't need to communicate with the child anymore
-		close(fdIPC_out[READ]);
-		close(fdIPC_err[READ]);
+    		//INITIALIZING BUFFERS
+    		char buf[MAXBUF]; // stdout buff
+    		char buf2[MAXBUF]; // stderr buff
+    		char date[DATESIZE];
+    		bzero(buf, MAXBUF); // clean the stdout buffer
+    		bzero(buf2, MAXBUF); // clean the stderr buffer
+    		bzero(date, DATESIZE); //clean the date buffer
 
-		// N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
-		if (dim > bufLenght)
-		{
-			printf("The output of the command is too long.\n\n");
-			return;
-		}
-		int dimOutNewCmd = strlen(cmd) + dim; // we want to print dim characters as the output of the cmd
-		int dimErrNewCmd = strlen(cmd) + dim2;
-		if (codeFlag == 1)
-		{
-			dimOutNewCmd += LOGLAYOUT_CODE_OUT;
-			dimErrNewCmd += LOGLAYOUT_CODE_ERR;
-		}
-		else
-		{
-			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
-			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
-		}
-		logOutLen += dimOutNewCmd;
-		logErrLen += dimErrNewCmd;
+    		int dim = read(fdIPC_out[READ], buf, MAXBUF);  // read the output written from the child in pipe
+    		int dim2 = read(fdIPC_err[READ], buf2, MAXBUF);
 
-		// log file lenght handling
-		if (logOutLen > maxOutLogLenght)
-		{
-			printf("Log file dimension for the stdout excedeed.\n\n");
-			dimension (&fd[0], &maxOutLogLenght);
-            logOutLen = dimOutNewCmd;
-		}
-		if (logErrLen > maxErrLogLenght)
-		{
-			printf("Log file dimension for the stderr excedeed.\n\n");
-            dimension (&fd[1], &maxErrLogLenght);
-            logErrLen = dimErrNewCmd;
-		}
+			if (i != cmds-1)  // if this is not the last command we send the output to the next command
+			{
+				write(fdIPC_out[WRITE], buf, dim);
+				close(fdIPC_out[WRITE]);
+				dup2(fdIPC_out[READ],0);
+			}
 
-		printf("%s", buf);  // print the stdout in the shell
-		printf("%s\n", buf2);  // print the stderr in the shell
+    		// close file descriptors, we don't need to communicate with the child anymore
+    		close(fdIPC_out[READ]);
+    		close(fdIPC_err[READ]);
 
-		// we convert the file descriptor into a stream in order to format the output
-		FILE * outLog = fdopen(fd[0], "w");
-		FILE * errLog = fdopen(fd[1], "w");
+    		// N.B.: we read MAXBUF character and then we will check if it is less then bufLenght
+    		if (dim > bufLenght)
+    		{
+    			printf("The output of the command is too long.\n\n");
+    			return;
+    		}
+    		int dimOutNewCmd = strlen(cmd[i]) + dim; // we want to print dim characters as the output of the cmd
+    		int dimErrNewCmd = strlen(cmd[i]) + dim2;
+    		if (codeFlag == 1)
+    		{
+    			dimOutNewCmd += LOGLAYOUT_CODE_OUT;
+    			dimErrNewCmd += LOGLAYOUT_CODE_ERR;
+    		}
+    		else
+    		{
+    			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
+    			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
+    		}
+    		logOutLen += dimOutNewCmd;
+    		logErrLen += dimErrNewCmd;
 
-		// STDOUT LOG
-		//COMMAND
-		fprintf(outLog, "COMMAND:\t%s", cmd);
-		//DATE
-		strftime(date, sizeof(date), "%c", tm);
-		fprintf(outLog, "\n\nDATE:\t\t%s", date);
-		//COMMAND OUTPUT
-		fprintf(outLog, "\n\nOUTPUT:\n\n%s", buf);
-		//COMMAND RETURN CODE
-		if (codeFlag == 1)
-		{
-			fprintf(outLog, "\nRETURN CODE:\t%d\n", returnCode);
-		}
-		fprintf(outLog, SEPARATOR);
-		fflush(outLog);
+    		// log file lenght handling
+    		if (logOutLen > maxOutLogLenght)
+    		{
+    			printf("Log file dimension for the stdout excedeed.\n\n");
+    			dimension (&fd[0], &maxOutLogLenght);
+                logOutLen = dimOutNewCmd;
+    		}
+    		if (logErrLen > maxErrLogLenght)
+    		{
+    			printf("Log file dimension for the stderr excedeed.\n\n");
+                dimension (&fd[1], &maxErrLogLenght);
+                logErrLen = dimErrNewCmd;
+    		}
 
-		// STDERR LOG
-		//COMMAND
-		fprintf(errLog, "COMMAND:\t%s", cmd);
-		//DATE
-		fprintf(errLog, "\n\nDATE:\t\t%s", date);
-		//COMMAND ERROR OUTPUT
-		fprintf(errLog, "\n\nERROR OUTPUT:\n\n%s", buf2);
-		//COMMAND RETURN CODE
-		if (codeFlag == 1)
-		{
-			fprintf(errLog, "\nRETURN CODE:\t%d\n", returnCode);
-		}
-		fprintf(errLog, SEPARATOR);
-		fflush(errLog);
+            if(i == cmds-1)
+            {
+    	        printf("%s", buf);  // print the stdout in the shell
+    	        printf("%s\n", buf2);  // print the stderr in the shell
+            }
 
+    		// we convert the file descriptor into a stream in order to format the output
+    		FILE * outLog = fdopen(fd[0], "w");
+    		FILE * errLog = fdopen(fd[1], "w");
+
+    		// STDOUT LOG
+    		//COMMAND
+    		fprintf(outLog, "COMMAND:\t%s", cmd[i]);
+    		//DATE
+    		strftime(date, sizeof(date), "%c", tm);
+    		fprintf(outLog, "\n\nDATE:\t\t%s", date);
+    		//COMMAND OUTPUT
+    		fprintf(outLog, "\n\nOUTPUT:\n\n%s", buf);
+    		//COMMAND RETURN CODE
+    		if (codeFlag == 1)
+    		{
+    			fprintf(outLog, "\nRETURN CODE:\t%d\n", returnCode);
+    		}
+    		fprintf(outLog, SEPARATOR);
+    		fflush(outLog);
+
+    		// STDERR LOG
+    		//COMMAND
+    		fprintf(errLog, "COMMAND:\t%s", cmd[i]);
+    		//DATE
+    		fprintf(errLog, "\n\nDATE:\t\t%s", date);
+    		//COMMAND ERROR OUTPUT
+    		fprintf(errLog, "\n\nERROR OUTPUT:\n\n%s", buf2);
+    		//COMMAND RETURN CODE
+    		if (codeFlag == 1)
+    		{
+    			fprintf(errLog, "\nRETURN CODE:\t%d\n", returnCode);
+    		}
+    		fprintf(errLog, SEPARATOR);
+    		fflush(errLog);
+        }
 		// NO, because fclose closes the file descriptor too (consequently seg fault)
 		//fclose(outLog);
 		//fclose(errLog);
@@ -259,6 +272,7 @@ void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, in
     	}
     	free(cmdSplitted);
 	}
+	return;
 }
 
 

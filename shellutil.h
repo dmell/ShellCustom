@@ -25,13 +25,13 @@ void showManual();
 /* extracts filename in args */
 char * estrai (char *source, int index);
 /* extracts a substring between given indexes */
-char * substring (char * src, int first, int last);
+char * substring (char * src, int first, int last);  //  TODO: unire estrai e substring in un'unica funzione
 /* handles the commands */
-char** parseCommand (char * cmd, int * cmds);
+char** parseCommand (char * cmd, int * cmds);  // TODO: unire parseCommand e splitArgs in un'unica funzione
 /* divides the commands */
 char ** splitArgs (const char * cmd);
 /* execute the commands */
-void run (char * cmd, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght);
+void run (char ** cmd, const int cmds, char * outfile, char * errfile, int * fd, int codeFlag, int bufLenght, int logfileLenght);
 /* when the log file dimension exceeds*/
 void dimension(int * fd, int *);
 /* custom exit function */
