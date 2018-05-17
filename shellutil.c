@@ -108,8 +108,9 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char ** cmd, const int cmds, char * outfile, char * errfile, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght)
+void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght)
 {
+	int in_restore = dup(0);  // we will use in_restore to restore stdin after dup2
     for(int i = 0; i < cmds; i++)
     {
     	pid_t pid;
@@ -181,6 +182,10 @@ void run (char ** cmd, const int cmds, char * outfile, char * errfile, FILE ** f
 				close(fdIPC_out[WRITE]);
 				dup2(fdIPC_out[READ],0);
 			}
+			else
+			{
+				dup2(in_restore,0);
+			}
 
     		// close file descriptors, we don't need to communicate with the child anymore
     		close(fdIPC_out[READ]);
@@ -204,17 +209,18 @@ void run (char ** cmd, const int cmds, char * outfile, char * errfile, FILE ** f
     			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
     			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
     		}
-    		printf("logOutLen: %d\nlogErrLen: %d\n", logOutLen, logErrLen);
     		/* Invece che tenere una variabile globale con la lunghezza dei file di log, calcoliamo
     		tramite la syscall lseek dove siamo arrivati, e vediamo se ci sta il nuovo comando */
-    		logOutLen = dimOutNewCmd;
-    		logErrLen = dimErrNewCmd;
+    		logOutLen += dimOutNewCmd;
+    		logErrLen += dimErrNewCmd;
 
     		// log file lenght handling
     		if (logOutLen > maxOutLogLenght)
     		{
+				printf("Previous fd: %p\n", fd[0]);
     			printf("Log file dimension for the stdout excedeed.\n\n");
     			dimension (fd[0], &maxOutLogLenght);
+				printf("New fd: %p\n", fd[0]);
                 logOutLen = dimOutNewCmd;
     		}
     		if (logErrLen > maxErrLogLenght)
@@ -267,7 +273,6 @@ void run (char ** cmd, const int cmds, char * outfile, char * errfile, FILE ** f
     		free(cmdSplitted[i]);
     	}
     	free(cmdSplitted);
-    	printf("Out log dimension: %d\nErr Log dimension: %d\n", logOutLen, logErrLen);
 	}
 	return;
 }
@@ -335,12 +340,13 @@ void dimension (FILE * fd, int* logLength)
                     } while (tempLogLenght < MINLOGLEN); //TODO: if the user
                             //has been born from the ass, this might crash
                     *logLength = tempLogLenght;
-					fd = fopen(name, "w");
-					if (fd == NULL)
+					FILE * newfp = fopen(name, "w");
+					if (newfp == NULL)
 					{
 						perror("fopen");
 						exit(1);
 					}
+					fd = newfp;
 				}
 				break;
 			default:

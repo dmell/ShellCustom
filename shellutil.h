@@ -31,7 +31,7 @@ char** parseCommand (char * cmd, int * cmds);  // TODO: unire parseCommand e spl
 /* divides the commands */
 char ** splitArgs (const char * cmd);
 /* execute the commands */
-void run (char ** cmd, const int cmds, char * outfile, char * errfile, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght);
+void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght);
 /* when the log file dimension exceeds*/
 void dimension(FILE * fd, int *);
 /* custom exit function */
