@@ -12,6 +12,138 @@
 #define READ 0
 #define WRITE 1
 
+void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, int * logfileLenght, int * bufLenght, int *code)
+{
+	int shortFlag; // we will use this to handle the double option to gives args
+	for (int i = 1; i < argc; i++)
+	{
+		// if man has been requested
+		if (strcmp("--help",argv[i]) == 0)
+		{
+			showManual();
+		}
+
+		if (strncmp(argv[i], "-o=", 3) == 0 || strncmp(argv[i], "--outfile=", 10) == 0)  // outfile
+		{
+			shortFlag = strncmp(argv[i], "--outfile=", 10);
+			if (*outfile == NULL)  // not set yet
+			{
+				if (shortFlag)
+				{
+					*outfile = substring(argv[i], 3, strlen(argv[i])-1);
+				}
+				else
+				{
+					*outfile = substring(argv[i], 10, strlen(argv[i])-1);
+				}
+			}
+			else  // already set, error
+			{
+				printf("shell: outfile parameter already entered.\n");
+				printf("Try './shell --help' for more information.\n");
+				exit(1);
+			}
+		}
+		else if (strncmp(argv[i], "-e=", 3) == 0 || strncmp(argv[i], "--errfile=", 10) == 0)  // errfile
+		{
+			shortFlag = strncmp(argv[i], "--errfile=", 10);
+			if (*errfile == NULL)  // not set yet
+			{
+				if (shortFlag)
+				{
+					*errfile = substring(argv[i], 3, strlen(argv[i])-1);
+				}
+				else
+				{
+					*errfile = substring(argv[i], 10, strlen(argv[i])-1);
+				}
+			}
+			else  // already set, error
+			{
+				printf("shell: errfile parameter already entered.\n");
+				printf("Try './shell --help' for more information.\n");
+				exit(1);
+			}
+		}
+		else if (strncmp(argv[i], "-m=", 3) == 0 || strncmp(argv[i], "--maxlen=", 9) == 0)  // maxlen
+		{
+			shortFlag = strncmp(argv[i], "--maxlen=", 9);
+			if (*logfileLenght == -1)  // not set yet
+			{
+				if (shortFlag)
+				{
+					*logfileLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
+				}
+				else
+				{
+					*logfileLenght = atoi(substring(argv[i], 9, strlen(argv[i])-1));
+				}
+			}
+			else  // already set, error
+			{
+				printf("shell: maxlen parameter already entered.\n");
+				printf("Try './shell --help' for more information.\n");
+				exit(1);
+			}
+		}
+		else if (strncmp(argv[i], "-c", 2) == 0 || strncmp(argv[i], "--code", 6) == 0)
+		{
+			*code = 1; // the flag is set to include return code of the commands
+			// N.B.: you can do it multiple times
+		}
+		else if (strncmp(argv[i], "-s=", 3) == 0 || strncmp(argv[i], "--size=", 7) == 0)  // buffer lenght
+		{
+			shortFlag = strncmp(argv[i], "--size=", 7);
+			if (*bufLenght == -1)  // not set yet
+			{
+				if (shortFlag)
+				{
+					*bufLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
+				}
+				else
+				{
+					*bufLenght = atoi(substring(argv[i], 7, strlen(argv[i])-1));
+				}
+			}
+			else  // already set, error
+			{
+				printf("shell: buffer length parameter already entered.\n");
+				printf("Try './shell --help' for more information.\n");
+				exit(1);
+			}
+		}
+	}
+
+	if (*logfileLenght == -1)  // if the maximum length has not been specified
+	*logfileLenght = DEFAULTLOGLEN;  // default
+
+	if (*bufLenght == -1)
+	*bufLenght = MAXBUF;
+
+	if (*logfileLenght < MINLOGLEN || *logfileLenght < *bufLenght)
+	{
+		printf("shell: error in buffer or file size.\n");
+		printf("Try './shell --help' for more information.\n");
+		exit(1);
+	}
+
+	// we check that the user has specified the log files
+	if (*outfile == NULL || *errfile == NULL)
+	{
+		printf("shell: missing mandatory parameter.\n");
+		printf("Try './shell --help' for more information.\n");
+		exit(1);
+	}
+
+	// we check that outfile name is different from errfile NAMEFILE
+	if (strcmp(*outfile,*errfile) == 0)
+	{
+		printf("shell: outfile and errfile parameters cannot be the same.\n");
+		printf("Try './shell --help' for more information.\n");
+		exit(1);
+	}
+}
+
 void showManual()
 {
 	printf("Usage: ./shell [PARAMETERS]\n");
@@ -30,6 +162,8 @@ void showManual()
 
 char** parseCommand (char * cmd, int * cmds)
 {
+	// NB we have already checked in shell.c if there's an exit, but in case the user type a blank space before the command, here we check again
+	// here we exit without free the memory and close the streams
 	if (strncmp(cmd, "exit", 4) == 0)
 	{
 		cExit(0);

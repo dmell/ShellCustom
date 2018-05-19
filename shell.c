@@ -16,141 +16,16 @@ int main(int argc, char **argv)
 	logOutLen = 0;
 	logErrLen = 0;
 
-	// if man has been requested
-	int man = 0; // used as bool
-	for (int i = 1; i < argc; i++)
-	{
-		if (strcmp("--help",argv[i]) == 0)
-		{
-			man = 1;
-		}
-	}
-	if (man)
-	{
-		showManual();
-	}
-
 	// parameters
 	char *outfile = NULL;  // the name of log outfile
 	char *errfile = NULL;  // the name of log errfile
+
 	// length set to -1 to check if the user has specified a new length, otherwise 4096
 	int logfileLenght = -1;
 	int bufLenght = -1;
 	int code = 0;  // usato come bool per opzione codice uscita
-	int shortFlag; // we will use this to handle the double option to gives args
-	for (int i = 1; i < argc; i++)
-	{
-		if (strncmp(argv[i], "-o=", 3) == 0 || strncmp(argv[i], "--outfile=", 10) == 0)  // outfile
-		{
-			shortFlag = strncmp(argv[i], "--outfile=", 10);
-			if (outfile == NULL)  // not set yet
-			{
-				if (shortFlag)
-				{
-					outfile = substring(argv[i], 3, strlen(argv[i])-1);
-				}
-				else
-				{
-					outfile = substring(argv[i], 10, strlen(argv[i])-1);
-				}
-			}
-			else  // already set, error
-			{
-				printf("shell: outfile parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "-e=", 3) == 0 || strncmp(argv[i], "--errfile=", 10) == 0)  // errfile
-		{
-			shortFlag = strncmp(argv[i], "--errfile=", 10);
-			if (errfile == NULL)  // not set yet
-			{
-				if (shortFlag)
-				{
-					errfile = substring(argv[i], 3, strlen(argv[i])-1);
-				}
-				else
-				{
-					errfile = substring(argv[i], 10, strlen(argv[i])-1);
-				}
-			}
-			else  // already set, error
-			{
-				printf("shell: errfile parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "-m=", 3) == 0 || strncmp(argv[i], "--maxlen=", 9) == 0)  // maxlen
-		{
-			shortFlag = strncmp(argv[i], "--maxlen=", 9);
-			if (logfileLenght == -1)  // not set yet
-			{
-				if (shortFlag)
-				{
-					logfileLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
-				}
-				else
-				{
-					logfileLenght = atoi(substring(argv[i], 9, strlen(argv[i])-1));
-				}
-			}
-			else  // already set, error
-			{
-				printf("shell: maxlen parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-		else if (strncmp(argv[i], "-c", 2) == 0 || strncmp(argv[i], "--code", 6) == 0)
-		{
-			code = 1; // the flag is set to include return code of the commands
-			// N.B.: you can do it multiple times
-		}
-		else if (strncmp(argv[i], "-s=", 3) == 0 || strncmp(argv[i], "--size=", 7) == 0)  // buffer lenght
-		{
-			shortFlag = strncmp(argv[i], "--size=", 7);
-			if (bufLenght == -1)  // not set yet
-			{
-				if (shortFlag)
-				{
-					bufLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
-				}
-				else
-				{
-					bufLenght = atoi(substring(argv[i], 7, strlen(argv[i])-1));
-				}
-			}
-			else  // already set, error
-			{
-				printf("shell: buffer length parameter already entered.\n");
-				printf("Try './shell --help' for more information.\n");
-				exit(1);
-			}
-		}
-	}
 
-	if (logfileLenght == -1)  // if the maximum length has not been specified
-		logfileLenght = DEFAULTLOGLEN;  // default
-
-	if (bufLenght == -1)
-		bufLenght = MAXBUF;
-
-	if (logfileLenght < MINLOGLEN || logfileLenght < bufLenght)
-	{
-		printf("shell: error in buffer or file size.\n");
-		printf("Try './shell --help' for more information.\n");
-		exit(1);
-	}
-
-	// we check that the user has specified the log files
-	if (outfile == NULL || errfile == NULL)
-	{
-		printf("shell: missing mandatory parameter.\n");
-		printf("Try './shell --help' for more information.\n");
-		exit(1);
-	}
+	checkParameters(argc, argv, &outfile, &errfile, &logfileLenght, &bufLenght, &code);
 
 	FILE * fd[2];
 	fd[0] = fopen(outfile, "w");
@@ -185,10 +60,13 @@ int main(int argc, char **argv)
 		{
 			continue;
 		}
+		if (strcmp("exit\n",line) == 0)
+		{
+			break;
+		}
 		cmd = parseCommand(line, &cmds);
 		run(cmd, cmds, fd, code, bufLenght, logfileLenght);
 		cmds = 1;
-
 	}
 
 	// free dynamic allocation of strings
@@ -207,6 +85,5 @@ int main(int argc, char **argv)
 		perror("fclose");
 		exit(1);
 	}
-
 	return 0;
 }

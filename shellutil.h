@@ -21,6 +21,10 @@ int logErrLen;
 
 
 /* definitions of the functions */
+
+/* estract the various options from the parameters */
+void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, int * logfileLenght, int * bufLenght, int *code);
+/* show the manual in case of --help option */
 void showManual();
 /* extracts a substring between given indexes */
 char * substring (char * src, int first, int last);
