@@ -73,29 +73,9 @@ char** parseCommand (char * cmd, int * cmds)
 	return cleancmd;
 }
 
-char * estrai (char *source, int index)
-{
-	char * tmp = NULL;
-	tmp = malloc(1024);
-
-	int i = index;
-
-	while (1)
-	{
-		if (source[i] == '\0')
-		{
-			break;
-		}
-
-		tmp[i-index] = source[i];
-
-		i++;
-	}
-	return tmp;
-}
-
 char * substring (char * src, int first, int last)
 {
+	//printf("%s\n", src);
 	char * res = malloc(last - first + 2);
 	int i;
 	int j = 0;
@@ -105,6 +85,7 @@ char * substring (char * src, int first, int last)
 		j++;
 	}
 	res[j] = '\0';
+	//printf("%s\n", res);
 	return res;
 }
 
@@ -130,6 +111,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 
     	// we use the function to create an array of strings
     	char ** cmdSplitted = splitArgs(cmd[i]);
+    	printf("%s %s %s\n", cmdSplitted[0], cmdSplitted[1], cmdSplitted[2]);
 
     	pid = fork();
 
@@ -146,11 +128,12 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		dup2(fdIPC_out[WRITE], 1);
     		dup2(fdIPC_err[WRITE], 2);
 
+    		//printf("Helo\n"); // magic function that makes everything work
     		execvp(cmdSplitted[0], cmdSplitted);
     		// the following lines will be executed only if the exec has failed
     		int commandError = errno;
-    		//fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
-    		write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
+    		fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
+    		//write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
     		exit(commandError);
     	}
     	else // parent
@@ -168,7 +151,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		char date[DATESIZE];
     		bzero(buf, MAXBUF); // clean the stdout buffer
     		bzero(buf2, MAXBUF); // clean the stderr buffer
-    		bzero(date, DATESIZE); //clean the date buffer
+    		bzero(date, DATESIZE); // clean the date buffer
 
     		int dim = read(fdIPC_out[READ], buf, MAXBUF);  // read the output written from the child in pipe
     		int dim2 = read(fdIPC_err[READ], buf2, MAXBUF);

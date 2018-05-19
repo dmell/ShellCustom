@@ -22,10 +22,8 @@ int logErrLen;
 
 /* definitions of the functions */
 void showManual();
-/* extracts filename in args */
-char * estrai (char *source, int index);
 /* extracts a substring between given indexes */
-char * substring (char * src, int first, int last);  //  TODO: unire estrai e substring in un'unica funzione
+char * substring (char * src, int first, int last);
 /* handles the commands */
 char** parseCommand (char * cmd, int * cmds);  // TODO: unire parseCommand e splitArgs in un'unica funzione
 /* divides the commands */

@@ -47,11 +47,11 @@ int main(int argc, char **argv)
 			{
 				if (shortFlag)
 				{
-					outfile = estrai(argv[i], 3);
+					outfile = substring(argv[i], 3, strlen(argv[i])-1);
 				}
 				else
 				{
-					outfile = estrai(argv[i], 10);
+					outfile = substring(argv[i], 10, strlen(argv[i])-1);
 				}
 			}
 			else  // already set, error
@@ -68,11 +68,11 @@ int main(int argc, char **argv)
 			{
 				if (shortFlag)
 				{
-					errfile = estrai (argv[i], 3);
+					errfile = substring(argv[i], 3, strlen(argv[i])-1);
 				}
 				else
 				{
-					errfile = estrai (argv[i], 10);
+					errfile = substring(argv[i], 10, strlen(argv[i])-1);
 				}
 			}
 			else  // already set, error
@@ -89,11 +89,11 @@ int main(int argc, char **argv)
 			{
 				if (shortFlag)
 				{
-					logfileLenght = atoi(estrai (argv[i], 3));
+					logfileLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
 				}
 				else
 				{
-					logfileLenght = atoi(estrai (argv[i], 9));
+					logfileLenght = atoi(substring(argv[i], 9, strlen(argv[i])-1));
 				}
 			}
 			else  // already set, error
@@ -115,11 +115,11 @@ int main(int argc, char **argv)
 			{
 				if (shortFlag)
 				{
-					bufLenght = atoi(estrai (argv[i], 3)) + 1; // to hold '\0' at the end
+					bufLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
 				}
 				else
 				{
-					bufLenght = atoi(estrai (argv[i], 7)) + 1;
+					bufLenght = atoi(substring(argv[i], 7, strlen(argv[i])-1));
 				}
 			}
 			else  // already set, error
