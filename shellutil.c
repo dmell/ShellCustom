@@ -152,23 +152,18 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		dup2(fdIPC_out[WRITE], 1);
     		dup2(fdIPC_err[WRITE], 2);
 
-    		//printf("Helo\n"); // magic function that makes everything work
     		execvp(cmdSplitted[0], cmdSplitted);
-    		write(out_backup, "execvp failed", strlen("execvp failed"));
-    		// the following lines will be executed only if the exec has failed
-    		// NB: e.g. if the command does not exists 
     		int commandError = errno;
-    		//fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
+    		fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
     		//write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
     		exit(commandError);
     	}
     	else // parent
     	{
-    		//printf("Back to the parent\n");
-
     		int returnCode;
     		wait(&returnCode);
     		returnCode = WEXITSTATUS(returnCode);
+			close(fdIPC_out[WRITE]);
     		close(fdIPC_err[WRITE]);
 
     		//INITIALIZING BUFFERS
@@ -184,14 +179,17 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 
 			if (i != cmds-1)  // if this is not the last command we send the output to the next command
 			{
+				pipe(fdIPC_out);  // we open he pipe again to write, using it for piping
 				dup2(fdIPC_out[READ],0);
+				close(fdIPC_out[READ]);
 				write(fdIPC_out[WRITE], buf, dim);
+				close(fdIPC_out[WRITE]);
+
 			}
 			else
 			{
 				dup2(in_restore,0);
 			}
-			close(fdIPC_out[WRITE]);
 
     		// close file descriptors, we don't need to communicate with the child anymore
     		close(fdIPC_out[READ]);
