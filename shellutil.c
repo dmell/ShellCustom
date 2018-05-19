@@ -207,6 +207,35 @@ char** parseCommand (char * cmd, int * cmds)
 	return cleancmd;
 }
 
+char * redirect(char ** line, int * out)
+{
+	char * name = NULL;
+	char * newline = NULL;
+	int i;
+	for (i=0; i < strlen(*line); i++)
+	{
+		if (*line[i] == '>')
+		{
+			name = substring(*line, i+1, strlen(*line));
+			newline = substring(*line, 0, i);
+			free(*line);
+			strcpy(*line, newline);
+			*out = 1;
+			return name;
+		}
+		else if (*line[i] == '<')
+		{
+			name = substring(*line, i+1, strlen(*line));
+			newline = substring(*line, 0, i);
+			free(*line);
+			strcpy(*line, newline);
+			*out = 0;
+			return name;
+		}
+	}
+	return name;
+}
+
 char ** splitArgs (const char * cmd)
 {
 	// tmp is used because after this function the string changes
@@ -249,7 +278,7 @@ char * substring (char * src, int first, int last)
 void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght)
 {
 	int in_restore = dup(0); // we will use in_restore to restore stdin after dup2
-	int out_backup = dup(1); // a backup of stdout, for debugging purpose
+	//int out_backup = dup(1); // a backup of stdout, for debugging purpose
     for(int i = 0; i < cmds; i++)
     {
     	pid_t pid;

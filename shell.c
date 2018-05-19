@@ -55,18 +55,57 @@ int main(int argc, char **argv)
 		fprintf(stdout, ">> ");
 		fflush(stdout);
 		read = getline(&line, &len, stdin);
+
         //TODO: function to check if the users entered an empty line
 		if (strcmp(line, "\n") == 0)  // avoid to execute null command in case of empty line
 		{
 			continue;
 		}
-		if (strcmp("exit\n",line) == 0)
+
+		if (strcmp("exit\n",line) == 0)  // NB it doesn't work with an empty space before the command, but we catch the exit command in the run function
 		{
 			break;
 		}
+
+		// redirezionamento
+		int out = 0; // used as boolean to check if there's a < or a > character
+		char * redirectFileName = redirect(&line, &out);  // find < or >, return the filename and delete it from the command
+		printf("DONE!\n");
+		int in_restore, out_restore, err_restore;
+		if (redirectFileName != NULL)
+		{
+			if (out == 1)
+			{
+			 	out_restore = dup(1);
+				err_restore = dup(2);
+				FILE * redirectFdOut = fopen(redirectFileName, "w");
+				dup2(fileno(redirectFdOut),1);
+				dup2(fileno(redirectFdOut),2);
+			}
+			else
+			{
+				in_restore = dup(0);
+				FILE * redirectFdIn = fopen(redirectFileName, "w");
+				dup2(fileno(redirectFdIn),0);
+			}
+		}
+
 		cmd = parseCommand(line, &cmds);
 		run(cmd, cmds, fd, code, bufLenght, logfileLenght);
 		cmds = 1;
+
+		if (redirectFileName != NULL)  // restore the normal stdin and stdout
+		{
+			if (out == 1)
+			{
+				dup2(out_restore,1);
+				dup2(err_restore,2);
+			}
+			else
+			{
+				dup2(in_restore,0);
+			}
+		}
 	}
 
 	// free dynamic allocation of strings
