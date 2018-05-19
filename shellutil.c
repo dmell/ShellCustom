@@ -73,6 +73,29 @@ char** parseCommand (char * cmd, int * cmds)
 	return cleancmd;
 }
 
+char ** splitArgs (const char * cmd)
+{
+	// tmp is used because after this function the string changes
+	char tmp [strlen(cmd)];
+	strcpy(tmp, cmd);
+	char * nextToken = strtok(tmp, " ");
+	char ** cleancmd = malloc((CMDSIZE/2)*(sizeof(char *)));
+	int i;
+	for (i = 0; i < CMDSIZE/2; i++)
+	{
+		cleancmd[i] = (char *)malloc(CMDSIZE+1);
+	}
+	i = 0;
+	while (nextToken != NULL)
+	{
+		strcpy(cleancmd[i],nextToken);
+		nextToken = strtok(NULL, " ");
+		i++;
+	}
+	cleancmd[i] = NULL;
+	return cleancmd;
+}
+
 char * substring (char * src, int first, int last)
 {
 	//printf("%s\n", src);
@@ -91,7 +114,8 @@ char * substring (char * src, int first, int last)
 
 void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght)
 {
-	int in_restore = dup(0);  // we will use in_restore to restore stdin after dup2
+	int in_restore = dup(0); // we will use in_restore to restore stdin after dup2
+	int out_backup = dup(1); // a backup of stdout, for debugging purpose
     for(int i = 0; i < cmds; i++)
     {
     	pid_t pid;
@@ -111,7 +135,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 
     	// we use the function to create an array of strings
     	char ** cmdSplitted = splitArgs(cmd[i]);
-    	printf("%s %s %s\n", cmdSplitted[0], cmdSplitted[1], cmdSplitted[2]);
+    	//printf("%s %s %s\n", cmdSplitted[0], cmdSplitted[1], cmdSplitted[2]);
 
     	pid = fork();
 
@@ -130,9 +154,11 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 
     		//printf("Helo\n"); // magic function that makes everything work
     		execvp(cmdSplitted[0], cmdSplitted);
+    		write(out_backup, "execvp failed", strlen("execvp failed"));
     		// the following lines will be executed only if the exec has failed
+    		// NB: e.g. if the command does not exists 
     		int commandError = errno;
-    		fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
+    		//fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
     		//write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
     		exit(commandError);
     	}
@@ -158,8 +184,8 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
 
 			if (i != cmds-1)  // if this is not the last command we send the output to the next command
 			{
-				write(fdIPC_out[WRITE], buf, dim);
 				dup2(fdIPC_out[READ],0);
+				write(fdIPC_out[WRITE], buf, dim);
 			}
 			else
 			{
@@ -345,27 +371,4 @@ void cExit (int code)
 {
 	printf("Goodbye\n");
 	exit(code);
-}
-
-char ** splitArgs (const char * cmd)
-{
-	// tmp is used because after this function the string changes
-	char tmp [strlen(cmd)];
-	strcpy(tmp, cmd);
-	char * nextToken = strtok(tmp, " ");
-	char ** cleancmd = malloc((CMDSIZE/2)*(sizeof(char *)));
-	int i;
-	for (i = 0; i < CMDSIZE/2; i++)
-	{
-		cleancmd[i] = (char *)malloc(CMDSIZE+1);
-	}
-	i = 0;
-	while (nextToken != NULL)
-	{
-		strcpy(cleancmd[i],nextToken);
-		nextToken = strtok(NULL, " ");
-		i++;
-	}
-	cleancmd[i] = NULL;
-	return cleancmd;
 }
