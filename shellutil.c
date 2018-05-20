@@ -162,13 +162,6 @@ void showManual()
 
 char** parseCommand (char * cmd, int * cmds)
 {
-	// NB we have already checked in shell.c if there's an exit, but in case the user type a blank space before the command, here we check again
-	// here we exit without free the memory and close the streams
-	if (strncmp(cmd, "exit", 4) == 0)
-	{
-		cExit(0);
-	}
-
 	// TODO: maybe it would be cool to handle ; and && too
 
 	// counting commands by searching pipes
@@ -207,28 +200,43 @@ char** parseCommand (char * cmd, int * cmds)
 	return cleancmd;
 }
 
-char * redirect(char ** line, int * out)
+char * redirect(char ** line, int * out, int * doubleChar)
 {
 	char * name = NULL;
-	char * newline = NULL;
 	int i;
 	for (i=0; i < strlen(*line); i++)
 	{
-		if (*line[i] == '>')
+		if ((*line)[i] == '>')
 		{
-			name = substring(*line, i+1, strlen(*line));
-			newline = substring(*line, 0, i);
-			free(*line);
-			strcpy(*line, newline);
+			if ((*line)[i+1] == '>')  // check if there is > or >>
+			{
+				i++;
+				*doubleChar = 1;
+			}
+			while ((*line)[i+1] == ' ')  // delete empty space before the name of the file
+			{
+				i++;
+			}
+			name = substring(*line, i+1, strlen(*line)-2);
+			*line = substring(*line, 0, i-1);
+			(*line)[i] = '\0';
 			*out = 1;
 			return name;
 		}
-		else if (*line[i] == '<')
+		else if ((*line)[i] == '<')
 		{
-			name = substring(*line, i+1, strlen(*line));
-			newline = substring(*line, 0, i);
-			free(*line);
-			strcpy(*line, newline);
+			if ((*line)[i+1] == '<')  // check if there is < or <<
+			{
+				i++;
+				*doubleChar = 1;
+			}
+			while ((*line)[i+1] == ' ')  // delete empty space before the name of the file
+			{
+				i++;
+			}
+			name = substring(*line, i+1, strlen(*line)-2);
+			*line = substring(*line, 0, i-1);
+			(*line)[i] = '\0';
 			*out = 0;
 			return name;
 		}

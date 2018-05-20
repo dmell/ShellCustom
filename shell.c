@@ -56,42 +56,70 @@ int main(int argc, char **argv)
 		fflush(stdout);
 		read = getline(&line, &len, stdin);
 
-        //TODO: function to check if the users entered an empty line
+		// remove empty spaces before the command
+		int i=0;
+		while (line[i] == ' ')
+		{
+			i++;
+		}
+		line = substring(line, i, read);
+
+		// handling of empty line and exit command
 		if (strcmp(line, "\n") == 0)  // avoid to execute null command in case of empty line
 		{
 			continue;
 		}
-
-		if (strcmp("exit\n",line) == 0)  // NB it doesn't work with an empty space before the command, but we catch the exit command in the run function
+		if (strcmp("exit\n",line) == 0)
 		{
 			break;
 		}
 
 		// redirezionamento
 		int out = 0; // used as boolean to check if there's a < or a > character
-		char * redirectFileName = redirect(&line, &out);  // find < or >, return the filename and delete it from the command
-		printf("DONE!\n");
+		int doubleChar = 0; // used as boolean to check if there's >/< or >>/<<
+		char * redirectFileName = redirect(&line, &out, &doubleChar);  // find < or >, return the filename and delete it from the command
+
 		int in_restore, out_restore, err_restore;
+		int redirectFdOut, redirectFdIn;
 		if (redirectFileName != NULL)
 		{
 			if (out == 1)
 			{
 			 	out_restore = dup(1);
 				err_restore = dup(2);
-				FILE * redirectFdOut = fopen(redirectFileName, "w");
-				dup2(fileno(redirectFdOut),1);
-				dup2(fileno(redirectFdOut),2);
+				if (doubleChar == 0)  // a single >
+				{
+					redirectFdOut = open(redirectFileName, O_WRONLY | O_TRUNC | O_CREAT, 0777);
+				}
+				else // a double >>
+				{
+					redirectFdOut = open(redirectFileName, O_WRONLY | O_APPEND | O_CREAT, 0777);
+				}
+				dup2(redirectFdOut,1);
+				dup2(redirectFdOut,2);
 			}
 			else
 			{
 				in_restore = dup(0);
-				FILE * redirectFdIn = fopen(redirectFileName, "w");
-				dup2(fileno(redirectFdIn),0);
+				redirectFdIn = open(redirectFileName, O_RDONLY, 0777);
+				if (redirectFdIn == -1)  // TODO support for << command
+				{
+					fprintf(stderr, "shell: the file %s does not exist!\n", redirectFileName);
+					continue;
+				}
+				dup2(redirectFdIn,0);
 			}
 		}
 
 		cmd = parseCommand(line, &cmds);
 		run(cmd, cmds, fd, code, bufLenght, logfileLenght);
+
+		for (int i = 0; i < cmds; i++)  // parseCommand allocate every time a new char **, we can free the memory
+		{
+			free(cmd[i]);
+		}
+		free(cmd);
+
 		cmds = 1;
 
 		if (redirectFileName != NULL)  // restore the normal stdin and stdout
@@ -100,10 +128,12 @@ int main(int argc, char **argv)
 			{
 				dup2(out_restore,1);
 				dup2(err_restore,2);
+				close(redirectFdOut);
 			}
 			else
 			{
 				dup2(in_restore,0);
+				close(redirectFdIn);
 			}
 		}
 	}
@@ -112,12 +142,6 @@ int main(int argc, char **argv)
 	free(line);
 	free(outfile);
 	free(errfile);
-
-	for (int i = 0; i < cmds; i++)
-	{
-		free(cmd[i]);
-	}
-	free(cmd);
 
 	if (fclose(fd[0]) && fclose(fd[1]))
 	{

@@ -23,7 +23,7 @@ int logErrLen;
 /* definitions of the functions */
 
 /* search a redirect char */
-char * redirect(char ** line, int * out);
+char * redirect(char ** line, int * out, int * doubleChar);
 /* estract the various options from the parameters */
 void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, int * logfileLenght, int * bufLenght, int *code);
 /* show the manual in case of --help option */
