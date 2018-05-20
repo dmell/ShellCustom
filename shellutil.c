@@ -203,11 +203,14 @@ char** parseCommand (char * cmd, int * cmds)
 char * redirect(char ** line, int * out, int * doubleChar)
 {
 	char * name = NULL;
+	char * newline = NULL;
 	int i;
+	int endCommand;
 	for (i=0; i < strlen(*line); i++)
 	{
 		if ((*line)[i] == '>')
 		{
+			endCommand = i-1;  // point where the commands end
 			if ((*line)[i+1] == '>')  // check if there is > or >>
 			{
 				i++;
@@ -218,13 +221,16 @@ char * redirect(char ** line, int * out, int * doubleChar)
 				i++;
 			}
 			name = substring(*line, i+1, strlen(*line)-2);
-			*line = substring(*line, 0, i-1);
-			(*line)[i] = '\0';
+			newline = substring(*line, 0, endCommand);
+			bzero(*line, strlen(*line));
+			strcpy(*line, newline);
+			free(newline);
 			*out = 1;
 			return name;
 		}
 		else if ((*line)[i] == '<')
 		{
+			endCommand = i-1;
 			if ((*line)[i+1] == '<')  // check if there is < or <<
 			{
 				i++;
@@ -235,8 +241,10 @@ char * redirect(char ** line, int * out, int * doubleChar)
 				i++;
 			}
 			name = substring(*line, i+1, strlen(*line)-2);
-			*line = substring(*line, 0, i-1);
-			(*line)[i] = '\0';
+			newline = substring(*line, 0, endCommand);
+			bzero(*line, strlen(*line));
+			strcpy(*line, newline);
+			free(newline);
 			*out = 0;
 			return name;
 		}
