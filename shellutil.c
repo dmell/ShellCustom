@@ -12,7 +12,7 @@
 #define READ 0
 #define WRITE 1
 
-void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, int * logfileLenght, int * bufLenght, int *code)
+void checkParameters(int argc, char ** argv)
 {
 	int shortFlag; // we will use this to handle the double option to gives args
 	for (int i = 1; i < argc; i++)
@@ -26,15 +26,15 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 		if (strncmp(argv[i], "-o=", 3) == 0 || strncmp(argv[i], "--outfile=", 10) == 0)  // outfile
 		{
 			shortFlag = strncmp(argv[i], "--outfile=", 10);
-			if (*outfile == NULL)  // not set yet
+			if (outfile == NULL)  // not set yet
 			{
 				if (shortFlag)
 				{
-					*outfile = substring(argv[i], 3, strlen(argv[i])-1);
+					outfile = substring(argv[i], 3, strlen(argv[i])-1);
 				}
 				else
 				{
-					*outfile = substring(argv[i], 10, strlen(argv[i])-1);
+					outfile = substring(argv[i], 10, strlen(argv[i])-1);
 				}
 			}
 			else  // already set, error
@@ -47,15 +47,15 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 		else if (strncmp(argv[i], "-e=", 3) == 0 || strncmp(argv[i], "--errfile=", 10) == 0)  // errfile
 		{
 			shortFlag = strncmp(argv[i], "--errfile=", 10);
-			if (*errfile == NULL)  // not set yet
+			if (errfile == NULL)  // not set yet
 			{
 				if (shortFlag)
 				{
-					*errfile = substring(argv[i], 3, strlen(argv[i])-1);
+					errfile = substring(argv[i], 3, strlen(argv[i])-1);
 				}
 				else
 				{
-					*errfile = substring(argv[i], 10, strlen(argv[i])-1);
+					errfile = substring(argv[i], 10, strlen(argv[i])-1);
 				}
 			}
 			else  // already set, error
@@ -68,15 +68,15 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 		else if (strncmp(argv[i], "-m=", 3) == 0 || strncmp(argv[i], "--maxlen=", 9) == 0)  // maxlen
 		{
 			shortFlag = strncmp(argv[i], "--maxlen=", 9);
-			if (*logfileLenght == -1)  // not set yet
+			if (logfileLenght == -1)  // not set yet
 			{
 				if (shortFlag)
 				{
-					*logfileLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
+					logfileLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
 				}
 				else
 				{
-					*logfileLenght = atoi(substring(argv[i], 9, strlen(argv[i])-1));
+					logfileLenght = atoi(substring(argv[i], 9, strlen(argv[i])-1));
 				}
 			}
 			else  // already set, error
@@ -88,21 +88,21 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 		}
 		else if (strncmp(argv[i], "-c", 2) == 0 || strncmp(argv[i], "--code", 6) == 0)
 		{
-			*code = 1; // the flag is set to include return code of the commands
+			code = 1; // the flag is set to include return code of the commands
 			// N.B.: you can do it multiple times
 		}
 		else if (strncmp(argv[i], "-s=", 3) == 0 || strncmp(argv[i], "--size=", 7) == 0)  // buffer lenght
 		{
 			shortFlag = strncmp(argv[i], "--size=", 7);
-			if (*bufLenght == -1)  // not set yet
+			if (bufLenght == -1)  // not set yet
 			{
 				if (shortFlag)
 				{
-					*bufLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
+					bufLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
 				}
 				else
 				{
-					*bufLenght = atoi(substring(argv[i], 7, strlen(argv[i])-1));
+					bufLenght = atoi(substring(argv[i], 7, strlen(argv[i])-1));
 				}
 			}
 			else  // already set, error
@@ -114,13 +114,13 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 		}
 	}
 
-	if (*logfileLenght == -1)  // if the maximum length has not been specified
-	*logfileLenght = DEFAULTLOGLEN;  // default
+	if (logfileLenght == -1)  // if the maximum length has not been specified
+	logfileLenght = DEFAULTLOGLEN;  // default
 
-	if (*bufLenght == -1)
-	*bufLenght = MAXBUF;
+	if (bufLenght == -1)
+	bufLenght = MAXBUF;
 
-	if (*logfileLenght < MINLOGLEN || *logfileLenght < *bufLenght)
+	if (logfileLenght < MINLOGLEN || logfileLenght < bufLenght)
 	{
 		printf("shell: error in buffer or file size.\n");
 		printf("Try './shell --help' for more information.\n");
@@ -128,7 +128,7 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 	}
 
 	// we check that the user has specified the log files
-	if (*outfile == NULL || *errfile == NULL)
+	if (outfile == NULL || errfile == NULL)
 	{
 		printf("shell: missing mandatory parameter.\n");
 		printf("Try './shell --help' for more information.\n");
@@ -136,7 +136,7 @@ void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, i
 	}
 
 	// we check that outfile name is different from errfile NAMEFILE
-	if (strcmp(*outfile,*errfile) == 0)
+	if (strcmp(outfile,errfile) == 0)
 	{
 		printf("shell: outfile and errfile parameters cannot be the same.\n");
 		printf("Try './shell --help' for more information.\n");
@@ -291,7 +291,7 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght)
+void run (char ** cmd, const int cmds, FILE ** fd)
 {
 	int in_restore = dup(0); // we will use in_restore to restore stdin after dup2
 	//int out_backup = dup(1); // a backup of stdout, for debugging purpose
@@ -382,7 +382,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		}
     		int dimOutNewCmd = strlen(cmd[i]) + dim; // we want to print dim characters as the output of the cmd
     		int dimErrNewCmd = strlen(cmd[i]) + dim2;
-    		if (codeFlag == 1)
+    		if (code == 1)
     		{
     			dimOutNewCmd += LOGLAYOUT_CODE_OUT;
     			dimErrNewCmd += LOGLAYOUT_CODE_ERR;
@@ -435,7 +435,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		//COMMAND OUTPUT
     		fprintf(fd[0], "\n\nOUTPUT:\n\n%s", buf);
     		//COMMAND RETURN CODE
-    		if (codeFlag == 1)
+    		if (code == 1)
     		{
     			fprintf(fd[0], "\nRETURN CODE:\t%d\n", returnCode);
     		}
@@ -450,7 +450,7 @@ void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, 
     		//COMMAND ERROR OUTPUT
     		fprintf(fd[1], "\n\nERROR OUTPUT:\n\n%s", buf2);
     		//COMMAND RETURN CODE
-    		if (codeFlag == 1)
+    		if (code == 1)
     		{
     			fprintf(fd[1], "\nRETURN CODE:\t%d\n", returnCode);
     		}

@@ -16,8 +16,13 @@
 #define LOGLAYOUT_NOCODE_ERR 111
 
 /* global variables */
-int logOutLen;
+int logOutLen; // logs' current dimension
 int logErrLen;
+char * outfile; // logs' names
+char * errfile;
+int logfileLenght; // logs' lenght
+int bufLenght; // buffer's lenght
+int code; // flag to indicate if the user wants the return code of commands
 
 
 /* definitions of the functions */
@@ -25,7 +30,7 @@ int logErrLen;
 /* search a redirect char */
 char * redirect(char ** line, int * out, int * doubleChar);
 /* estract the various options from the parameters */
-void checkParameters(int argc, char ** argv, char ** outfile, char ** errfile, int * logfileLenght, int * bufLenght, int *code);
+void checkParameters(int argc, char ** argv);
 /* show the manual in case of --help option */
 void showManual();
 /* extracts a substring between given indexes */
@@ -35,7 +40,7 @@ char** parseCommand (char * cmd, int * cmds);  // TODO: unire parseCommand e spl
 /* divides the commands */
 char ** splitArgs (const char * cmd);
 /* execute the commands */
-void run (char ** cmd, const int cmds, FILE ** fd, int codeFlag, int bufLenght, int logfileLenght);
+void run (char ** cmd, const int cmds, FILE ** fd);
 /* when the log file dimension exceeds*/
 char * dimension(FILE * fd, int *);
 /* custom exit function */

@@ -15,17 +15,14 @@ int main(int argc, char **argv)
 	// initialization of the global variables
 	logOutLen = 0;
 	logErrLen = 0;
-
-	// parameters
-	char *outfile = NULL;  // the name of log outfile
-	char *errfile = NULL;  // the name of log errfile
-
+	outfile = NULL;  // the name of log outfile
+	errfile = NULL;  // the name of log errfile
 	// length set to -1 to check if the user has specified a new length, otherwise 4096
-	int logfileLenght = -1;
-	int bufLenght = -1;
-	int code = 0;  // usato come bool per opzione codice uscita
+	logfileLenght = -1;
+	bufLenght = -1;
+	code = 0;  // usato come bool per opzione codice uscita
 
-	checkParameters(argc, argv, &outfile, &errfile, &logfileLenght, &bufLenght, &code);
+	checkParameters(argc, argv);
 
 	FILE * fd[2];
 	fd[0] = fopen(outfile, "w");
@@ -62,6 +59,7 @@ int main(int argc, char **argv)
 		{
 			i++;
 		}
+		// NB: substring allocates dynamically the new string, so we are occupying memory twice
 		line = substring(line, i, read);
 
 		// handling of empty line and exit command
@@ -112,9 +110,9 @@ int main(int argc, char **argv)
 		}
 
 		cmd = parseCommand(line, &cmds);
-		run(cmd, cmds, fd, code, bufLenght, logfileLenght);
+		run(cmd, cmds, fd);
 
-		for (int i = 0; i < cmds; i++)  // parseCommand allocate every time a new char **, we can free the memory
+		for (int i = 0; i < cmds; i++)  // parseCommand allocates every time a new char **, we can free the memory
 		{
 			free(cmd[i]);
 		}
