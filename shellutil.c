@@ -210,7 +210,7 @@ char * redirect(char ** line, int * out, int * doubleChar)
 	{
 		if ((*line)[i] == '>')
 		{
-			endCommand = i-1;  // point where the commands end
+			endCommand = i;  // point where the commands end
 			if ((*line)[i+1] == '>')  // check if there is > or >>
 			{
 				i++;
@@ -230,7 +230,7 @@ char * redirect(char ** line, int * out, int * doubleChar)
 		}
 		else if ((*line)[i] == '<')
 		{
-			endCommand = i-1;
+			endCommand = i;
 			if ((*line)[i+1] == '<')  // check if there is < or <<
 			{
 				i++;
