@@ -333,7 +333,7 @@ void run (char ** cmd, const int cmds, FILE ** fd)
 
     		execvp(cmdSplitted[0], cmdSplitted);
     		int commandError = errno;
-    		// TODO: setting an error flag to handle different logging 
+    		// TODO: setting an error flag to handle different logging
     		fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
     		//write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
     		exit(commandError);
@@ -446,7 +446,11 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     		logErrLen += strlen(logErrBuf);
 
     		// log file lenght handling
-    		if (logOutLen > maxOutLogLenght)
+			if (cmds > 1 && i != cmds-1)  // if this is  one (not the last) of more command we need to restore the stdin for dimension function
+			{
+				dup2(in_restore,0);
+			}
+			if (logOutLen > maxOutLogLenght)
     		{
     			printf("Log file dimension for the stdout excedeed.\n\n");
     			char * newfilename = dimension (fd[0], &maxOutLogLenght);
@@ -476,6 +480,15 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     			}
                 logErrLen = strlen(logErrBuf);
     		}
+			if (cmds > 1 && i != cmds-1)  // if this is one (not the last) of more command we need to restore the correct stdin for piping
+			{
+				pipe(fdIPC_out);  // we open he pipe again to write, using it for piping
+				dup2(fdIPC_out[READ],0);
+				close(fdIPC_out[READ]);
+				write(fdIPC_out[WRITE], buf, dim);
+				close(fdIPC_out[WRITE]);
+			}
+
 
     		fprintf(fd[0], "%s", logOutBuf);
     		fflush(fd[0]);
@@ -487,7 +500,7 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     	        printf("%s", buf);  // print the stdout in the shell
     	        printf("%s\n", buf2);  // print the stderr in the shell
             }
-    		
+
         }
 
         for (int i = 0; i < CMDSIZE/2; i++)
