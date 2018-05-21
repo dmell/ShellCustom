@@ -7,13 +7,9 @@
 #define DEFAULTLOGLEN 4096
 #define MINLOGLEN 512
 #define MAXBUF 4096
-#define SEPARATOR "\n------------------------------------------------\n\n"
-#define SEPARATOR_LEN 51
+#define SEPARATOR "\n\n------------------------------------------------\n\n"
 #define DATESIZE 32
-#define LOGLAYOUT_CODE_OUT 120
-#define LOGLAYOUT_CODE_ERR 126
-#define LOGLAYOUT_NOCODE_OUT 105
-#define LOGLAYOUT_NOCODE_ERR 111
+#define LOGLAYOUT_DIM 4400
 
 /* global variables */
 int logOutLen; // logs' current dimension

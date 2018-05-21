@@ -333,6 +333,7 @@ void run (char ** cmd, const int cmds, FILE ** fd)
 
     		execvp(cmdSplitted[0], cmdSplitted);
     		int commandError = errno;
+    		// TODO: setting an error flag to handle different logging 
     		fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
     		//write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
     		exit(commandError);
@@ -352,6 +353,7 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     		bzero(buf, MAXBUF); // clean the stdout buffer
     		bzero(buf2, MAXBUF); // clean the stderr buffer
     		bzero(date, DATESIZE); // clean the date buffer
+    		strftime(date, sizeof(date), "%c", tm);
 
     		int dim = read(fdIPC_out[READ], buf, MAXBUF);  // read the output written from the child in pipe
     		int dim2 = read(fdIPC_err[READ], buf2, MAXBUF);
@@ -380,22 +382,68 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     			printf("The output of the command is too long.\n\n");
     			return;
     		}
-    		int dimOutNewCmd = strlen(cmd[i]) + dim; // we want to print dim characters as the output of the cmd
-    		int dimErrNewCmd = strlen(cmd[i]) + dim2;
+
+    		char logOutBuf [LOGLAYOUT_DIM];
+    		char logErrBuf [LOGLAYOUT_DIM];
+    		bzero(logOutBuf, LOGLAYOUT_DIM);
+    		bzero(logErrBuf, LOGLAYOUT_DIM);
+
+    		// STDOUT LOG
+    		strcat(logOutBuf, "COMMAND:\t");
+    		for (int j = 0; j < cmds; j++)
+    		{
+    			strcat(logOutBuf, cmd[j]);
+    			if (j != cmds-1)
+    				strcat(logOutBuf, " | ");
+    		}
+    		if (cmds > 1)
+    		{
+    			strcat(logOutBuf, "\nSUBCOMMAND:\t");
+    			strcat(logOutBuf, cmd[i]);
+    		}
+    		strcat(logOutBuf, "\n\nDATE:\t\t");
+    		strcat(logOutBuf, date);
+    		strcat(logOutBuf, "\n\nOUTPUT:\n\n");
+    		strcat(logOutBuf, buf);
     		if (code == 1)
     		{
-    			dimOutNewCmd += LOGLAYOUT_CODE_OUT;
-    			dimErrNewCmd += LOGLAYOUT_CODE_ERR;
+    			strcat(logOutBuf, "\nRETURN CODE:\t");
+    			char * returnCodeString = malloc(3);
+    			sprintf(returnCodeString, "%d", returnCode);
+    			strcat(logOutBuf, returnCodeString);
+    			free(returnCodeString);
     		}
-    		else
+    		strcat(logOutBuf, SEPARATOR);
+
+    		// STDERR LOG
+    		strcat(logErrBuf, "COMMAND:\t");
+    		for (int j = 0; j < cmds; j++)
     		{
-    			dimOutNewCmd += LOGLAYOUT_NOCODE_OUT;
-    			dimErrNewCmd += LOGLAYOUT_NOCODE_ERR;
+    			strcat(logErrBuf, cmd[j]);
+    			if (j != cmds-1)
+    				strcat(logErrBuf, " | ");
     		}
+    		if (cmds > 1)
+    		{
+    			strcat(logErrBuf, "\nSUBCOMMAND:\t");
+    			strcat(logErrBuf, cmd[i]);
+    		}
+    		strcat(logErrBuf, "\n\nDATE:\t\t");
+    		strcat(logErrBuf, date);
+    		strcat(logErrBuf, "\n\nERROR OUTPUT:\n\n");
+    		strcat(logErrBuf, buf2);
+    		if (code == 1)
+    		{
+    			strcat(logErrBuf, "\nRETURN CODE:\t");
+    			char * returnCodeString = malloc(3);
+    			sprintf(returnCodeString, "%d", returnCode);
+    			strcat(logErrBuf, returnCodeString);
+    			free(returnCodeString);
+    		}
+    		strcat(logErrBuf, SEPARATOR);
 
-    		logOutLen += dimOutNewCmd;
-    		logErrLen += dimErrNewCmd;
-
+    		logOutLen += strlen(logOutBuf);
+    		logErrLen += strlen(logErrBuf);
 
     		// log file lenght handling
     		if (logOutLen > maxOutLogLenght)
@@ -411,51 +459,35 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     					perror("Opening new file");
     				}
     			}
-                logOutLen = dimOutNewCmd;
+                logOutLen = strlen(logOutBuf);
     		}
     		if (logErrLen > maxErrLogLenght)
     		{
     			printf("Log file dimension for the stderr excedeed.\n\n");
-                dimension (fd[1], &maxErrLogLenght);
-                logErrLen = dimErrNewCmd;
+                char * newfilename = dimension (fd[1], &maxErrLogLenght);
+                if (newfilename != NULL)
+    			{
+    				fclose(fd[1]);
+    				fd[1] = fopen(newfilename, "w");
+    				if (fd[1] == NULL)
+    				{
+    					perror("Opening new file");
+    				}
+    			}
+                logErrLen = strlen(logErrBuf);
     		}
+
+    		fprintf(fd[0], "%s", logOutBuf);
+    		fflush(fd[0]);
+    		fprintf(fd[1], "%s", logErrBuf);
+    		fflush(fd[1]);
 
             if(i == cmds-1)
             {
     	        printf("%s", buf);  // print the stdout in the shell
     	        printf("%s\n", buf2);  // print the stderr in the shell
             }
-
-    		// STDOUT LOG
-    		//COMMAND
-    		fprintf(fd[0], "COMMAND:\t%s", cmd[i]);
-    		//DATE
-    		strftime(date, sizeof(date), "%c", tm);
-    		fprintf(fd[0], "\n\nDATE:\t\t%s", date);
-    		//COMMAND OUTPUT
-    		fprintf(fd[0], "\n\nOUTPUT:\n\n%s", buf);
-    		//COMMAND RETURN CODE
-    		if (code == 1)
-    		{
-    			fprintf(fd[0], "\nRETURN CODE:\t%d\n", returnCode);
-    		}
-    		fprintf(fd[0], SEPARATOR);
-    		fflush(fd[0]);
-
-    		// STDERR LOG
-    		//COMMAND
-    		fprintf(fd[1], "COMMAND:\t%s", cmd[i]);
-    		//DATE
-    		fprintf(fd[1], "\n\nDATE:\t\t%s", date);
-    		//COMMAND ERROR OUTPUT
-    		fprintf(fd[1], "\n\nERROR OUTPUT:\n\n%s", buf2);
-    		//COMMAND RETURN CODE
-    		if (code == 1)
-    		{
-    			fprintf(fd[1], "\nRETURN CODE:\t%d\n", returnCode);
-    		}
-    		fprintf(fd[1], SEPARATOR);
-    		fflush(fd[1]);
+    		
         }
 
         for (int i = 0; i < CMDSIZE/2; i++)
