@@ -3,6 +3,7 @@
 
 /* costants for the programm */
 #define STDOUT 1
+#define MAXOPERATORS 50
 #define CMDSIZE 32
 #define DEFAULTLOGLEN 4096
 #define MINLOGLEN 512
@@ -23,6 +24,8 @@ int code; // flag to indicate if the user wants the return code of commands
 
 /* definitions of the functions */
 
+/* find multiple commands divided by ; && || */
+char ** findMultipleCommands(char ** operators, char * line);
 /* search a redirect char */
 char * redirect(char ** line, int * out, int * doubleChar);
 /* estract the various options from the parameters */
@@ -36,7 +39,7 @@ char** parseCommand (char * cmd, int * cmds);  // TODO: unire parseCommand e spl
 /* divides the commands */
 char ** splitArgs (const char * cmd);
 /* execute the commands */
-void run (char ** cmd, const int cmds, FILE ** fd);
+int run (char ** cmd, const int cmds, FILE ** fd);
 /* when the log file dimension exceeds*/
 char * dimension(FILE * fd, int *);
 /* custom exit function */

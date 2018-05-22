@@ -160,6 +160,70 @@ void showManual()
 	exit(0);
 }
 
+
+
+char ** findMultipleCommands(char ** operators, char * line)
+{
+	int counter = 0;
+	for (int i=0; i<strlen(line); i++)
+	{
+		if (line[i] == ';')
+		{
+			(*operators)[counter] = ';';
+			counter++;
+		}
+		else if ((line[i] == '|') && (line[i+1] == '|'))
+		{
+			(*operators)[counter] = '|';
+			counter++;
+			i++;  // we've checked 2 characters of line
+		}
+		else if ((line[i] == '&') && (line[i+1] == '&'))
+		{
+			(*operators)[counter] = '&';
+			counter++;
+			i++;  // we've checked 2 characters of line
+		}
+	}
+	(*operators)[counter] = 'e';  // to indicate the end of the array
+
+	char ** multipleCommands = (char **)malloc((counter+1)*(sizeof(char*)));
+	for (int i = 0; i < counter+1; i++)
+	{
+		multipleCommands[i] = (char*)malloc((CMDSIZE+1)*(sizeof(char)));
+	}
+
+	counter=0;
+	int first=0;
+	for (int i=0; i<strlen(line); i++)
+	{
+		if (line[i] == ';')
+		{
+			multipleCommands[counter] = substring(line, first, i);
+			first=i+1;
+			counter++;
+		}
+		else if ((line[i] == '|') && (line[i+1] == '|'))
+		{
+			multipleCommands[counter] = substring(line, first, i);
+			i++;  // we've checked 2 characters of line
+			first=i+1;
+			counter++;
+		}
+		else if ((line[i] == '&') && (line[i+1] == '&'))
+		{
+			multipleCommands[counter] = substring(line, first, i);
+			i++;  // we've checked 2 characters of line
+			first=i+1;
+			counter++;
+		}
+	}
+	multipleCommands[counter] = substring(line, first, strlen(line));  // add the last command
+
+	return multipleCommands;
+}
+
+
 char** parseCommand (char * cmd, int * cmds)
 {
 	// TODO: maybe it would be cool to handle ; and && too
@@ -291,14 +355,15 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
-void run (char ** cmd, const int cmds, FILE ** fd)
+int run (char ** cmd, const int cmds, FILE ** fd)
 {
 	int in_restore = dup(0); // we will use in_restore to restore stdin after dup2
 	//int out_backup = dup(1); // a backup of stdout, for debugging purpose
+
+	int returnCode;
     for(int i = 0; i < cmds; i++)
     {
     	pid_t pid;
-    	int returnCode;
         int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
         int maxErrLogLenght = logfileLenght; // relative dimension of the log files
     	// date and time of the execution
@@ -340,7 +405,6 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     	}
     	else // parent
     	{
-    		int returnCode;
     		wait(&returnCode);
     		returnCode = WEXITSTATUS(returnCode);
 			close(fdIPC_out[WRITE]);
@@ -380,7 +444,7 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     		if (dim > bufLenght)
     		{
     			printf("The output of the command is too long.\n\n");
-    			return;
+    			return 0;  // run is false, an error has occurred
     		}
 
     		char logOutBuf [LOGLAYOUT_DIM];
@@ -509,7 +573,15 @@ void run (char ** cmd, const int cmds, FILE ** fd)
     	}
     	free(cmdSplitted);
 	}
-	return;
+
+	if (returnCode == 0)  // command correctly executed
+	{
+		return 1;  // run is true
+	}
+	else  // command error
+	{
+		return 0;  // run in false
+	}
 }
 
 
