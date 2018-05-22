@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     //Brief description of the Shell
     printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.69 (May 17 2018)\n");
+    printf("v0.9 (May 22 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 
@@ -74,23 +74,24 @@ int main(int argc, char **argv)
 
 		// multiple commands
 		char * operators = malloc(MAXOPERATORS*sizeof(char));  // save here the sequence of the operators ; && ||. NB the last is an 'e' char to indicate the end
+		bzero(operators, MAXOPERATORS);
 		char ** commands;  // save here the commands divided by ; && ||
 		commands = findMultipleCommands(&operators, line);
 
 		int indexMultipleCommands = 0;
-		int valuePrevoiusCommand = 0;  // used as boolean
+		int valuePreviousCommand = 0;  // used as boolean
 		do {
-			strcpy(line, commands[indexMultipleCommands]);
+			//strcpy(line, commands[indexMultipleCommands]);
 			if ((indexMultipleCommands == 0) ||  // the first command is always executed
-			   ((operators[indexMultipleCommands-1] == '|') && (valuePrevoiusCommand == 0)) ||  // previous command is false and this command follows a || operator
-			   ((operators[indexMultipleCommands-1] == '&') && (valuePrevoiusCommand == 1)) ||  // previous command is true and this command follows a && operator
+			   ((operators[indexMultipleCommands-1] == '|') && (valuePreviousCommand == 0)) ||  // previous command is false and this command follows a || operator
+			   ((operators[indexMultipleCommands-1] == '&') && (valuePreviousCommand == 1)) ||  // previous command is true and this command follows a && operator
 			   (operators[indexMultipleCommands-1] == ';'))  // this command follows a ; operator
 			{
 				// redirezionamento
 				int out = 0; // used as boolean to check if there's a < or a > character
 				int doubleChar = 0; // used as boolean to check if there's >/< or >>/<<
-				char * redirectFileName = redirect(&line, &out, &doubleChar);  // find < or >, return the filename and delete it from the command
-
+				char * redirectFileName = redirect(&commands[indexMultipleCommands], &out, &doubleChar);  // find < or >, return the filename and delete it from the command
+				//printf("Parsing redirezionamento: %s\n", commands[0]);
 				int in_restore, out_restore, err_restore;
 				int redirectFdOut, redirectFdIn;
 				if (redirectFileName != NULL)
@@ -123,8 +124,9 @@ int main(int argc, char **argv)
 					}
 				}
 
-				cmd = parseCommand(line, &cmds);
-				valuePrevoiusCommand = run(cmd, cmds, fd);
+				cmd = parseCommand(commands[indexMultipleCommands], &cmds);
+				//printf("Parsing pipe: %s\n", cmd[0]);
+				valuePreviousCommand = run(cmd, cmds, fd);
 
 				for (int i = 0; i < cmds; i++)  // parseCommand allocates every time a new char **, we can free the memory
 				{
@@ -151,6 +153,12 @@ int main(int argc, char **argv)
 			}
 			indexMultipleCommands++;
 		} while (operators[indexMultipleCommands-1] != 'e');
+		free(operators);
+		for(int i = 0; i < indexMultipleCommands; i++)
+		{
+			free(commands[i]);
+		}
+		free(commands);
 	}
 
 	// free dynamic allocation of strings

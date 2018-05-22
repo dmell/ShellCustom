@@ -199,22 +199,22 @@ char ** findMultipleCommands(char ** operators, char * line)
 	{
 		if (line[i] == ';')
 		{
-			multipleCommands[counter] = substring(line, first, i);
+			multipleCommands[counter] = substring(line, first, i-1);
 			first=i+1;
 			counter++;
 		}
 		else if ((line[i] == '|') && (line[i+1] == '|'))
 		{
-			multipleCommands[counter] = substring(line, first, i);
-			i++;  // we've checked 2 characters of line
-			first=i+1;
+			multipleCommands[counter] = substring(line, first, i-1);
+			//i++;  // we've checked 2 characters of line
+			first=i+2;
 			counter++;
 		}
 		else if ((line[i] == '&') && (line[i+1] == '&'))
 		{
-			multipleCommands[counter] = substring(line, first, i);
-			i++;  // we've checked 2 characters of line
-			first=i+1;
+			multipleCommands[counter] = substring(line, first, i-1);
+			//i++;  // we've checked 2 characters of line
+			first=i+2;
 			counter++;
 		}
 	}
@@ -260,7 +260,10 @@ char** parseCommand (char * cmd, int * cmds)
 			beg = i + 1;
 		}
 	}
-	cleancmd[j] = substring(cmd, beg, i-2);  // insert last command
+	if (cmd[i-1] == '\n')
+		cleancmd[j] = substring(cmd, beg, i-2);  // insert last command
+	else
+		cleancmd[j] = substring(cmd, beg, i-1);  // this case comes up with || 
 	return cleancmd;
 }
 
@@ -359,6 +362,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 {
 	int in_restore = dup(0); // we will use in_restore to restore stdin after dup2
 	//int out_backup = dup(1); // a backup of stdout, for debugging purpose
+	//printf("run arguments: %s %s \n", cmd[0], cmd[1]);
 
 	int returnCode;
     for(int i = 0; i < cmds; i++)
@@ -580,7 +584,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 	}
 	else  // command error
 	{
-		return 0;  // run in false
+		return 0;  // run is false
 	}
 }
 
