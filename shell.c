@@ -37,7 +37,6 @@ int main(int argc, char **argv)
 	char *line = NULL;  // stringa dove viene memorizzato il comando inserito dall'utente
 	size_t len = 0;  // ???
 	ssize_t read = 0;  // numero di caratteri letti (valore di ritorno di getlineq)
-	int error;  // codice di errore dell'esecuzione del comando (valore di ritorno di system)
 
 	char ** cmd; // in every position there is a string containing a command and its arguments.
 	int cmds=1;  // there's always one command
@@ -73,7 +72,8 @@ int main(int argc, char **argv)
 		}
 
 		// multiple commands
-		char * operators = malloc(MAXOPERATORS*sizeof(char));  // save here the sequence of the operators ; && ||. NB the last is an 'e' char to indicate the end
+		// save here the sequence of the operators ; && ||. NB the last is an 'e' char to indicate the end
+		char * operators = malloc(MAXOPERATORS*sizeof(char));
 		bzero(operators, MAXOPERATORS);
 		char ** commands;  // save here the commands divided by ; && ||
 		commands = findMultipleCommands(&operators, line);
@@ -90,7 +90,8 @@ int main(int argc, char **argv)
 				// redirezionamento
 				int out = 0; // used as boolean to check if there's a < or a > character
 				int doubleChar = 0; // used as boolean to check if there's >/< or >>/<<
-				char * redirectFileName = redirect(&commands[indexMultipleCommands], &out, &doubleChar);  // find < or >, return the filename and delete it from the command
+				// find < or >, return the filename and delete it from the command
+				char * redirectFileName = redirect(&commands[indexMultipleCommands], &out, &doubleChar);
 				//printf("Parsing redirezionamento: %s\n", commands[0]);
 				int in_restore, out_restore, err_restore;
 				int redirectFdOut, redirectFdIn;
