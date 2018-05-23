@@ -53,13 +53,13 @@ int main(int argc, char **argv)
 		read = getline(&line, &len, stdin);
 
 		// remove empty spaces before the command
-		int i=0;
-		while (line[i] == ' ')
+		int index=0;
+		while (line[index] == ' ')
 		{
-			i++;
+			index++;
 		}
 		// NB: substring allocates dynamically the new string, so we are occupying memory twice
-		line = substring(line, i, read);
+		line = substring(line, index, read);
 
 		// handling of empty line and exit command
 		if (strcmp(line, "\n") == 0)  // avoid to execute null command in case of empty line
@@ -129,7 +129,8 @@ int main(int argc, char **argv)
 				//printf("Parsing pipe: %s\n", cmd[0]);
 				valuePreviousCommand = run(cmd, cmds, fd);
 
-				for (int i = 0; i < cmds; i++)  // parseCommand allocates every time a new char **, we can free the memory
+				int i;
+				for (i = 0; i < cmds; i++)  // parseCommand allocates every time a new char **, we can free the memory
 				{
 					free(cmd[i]);
 				}
@@ -155,7 +156,8 @@ int main(int argc, char **argv)
 			indexMultipleCommands++;
 		} while (operators[indexMultipleCommands-1] != 'e');
 		free(operators);
-		for(int i = 0; i < indexMultipleCommands; i++)
+		int i;
+		for(i = 0; i < indexMultipleCommands; i++)
 		{
 			free(commands[i]);
 		}

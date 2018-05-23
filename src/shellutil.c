@@ -15,7 +15,8 @@
 void checkParameters(int argc, char ** argv)
 {
 	int shortFlag; // we will use this to handle the double option to gives args
-	for (int i = 1; i < argc; i++)
+	int i;
+	for (i = 1; i < argc; i++)
 	{
 		// if man has been requested
 		if (strcmp("--help",argv[i]) == 0)
@@ -165,7 +166,8 @@ void showManual()
 char ** findMultipleCommands(char ** operators, char * line)
 {
 	int counter = 0;
-	for (int i=0; i<strlen(line); i++)
+	int i;
+	for (i=0; i<strlen(line); i++)
 	{
 		if (line[i] == ';')
 		{
@@ -188,14 +190,14 @@ char ** findMultipleCommands(char ** operators, char * line)
 	(*operators)[counter] = 'e';  // to indicate the end of the array
 
 	char ** multipleCommands = (char **)malloc((counter+1)*(sizeof(char*)));
-	for (int i = 0; i < counter+1; i++)
+	for (i = 0; i < counter+1; i++)
 	{
 		multipleCommands[i] = (char*)malloc((CMDSIZE+1)*(sizeof(char)));
 	}
 
 	counter=0;
 	int first=0;
-	for (int i=0; i<strlen(line); i++)
+	for (i=0; i<strlen(line); i++)
 	{
 		if (line[i] == ';')
 		{
@@ -263,7 +265,7 @@ char** parseCommand (char * cmd, int * cmds)
 	if (cmd[i-1] == '\n')
 		cleancmd[j] = substring(cmd, beg, i-2);  // insert last command
 	else
-		cleancmd[j] = substring(cmd, beg, i-1);  // this case comes up with || 
+		cleancmd[j] = substring(cmd, beg, i-1);  // this case comes up with ||
 	return cleancmd;
 }
 
@@ -348,7 +350,7 @@ char * substring (char * src, int first, int last)
 	char * res = malloc(last - first + 2);
 	int i;
 	int j = 0;
-	for (int i = first; i <= last; i++)
+	for (i = first; i <= last; i++)
 	{
 		res[j] = src[i];
 		j++;
@@ -365,7 +367,8 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 	//printf("run arguments: %s %s \n", cmd[0], cmd[1]);
 
 	int returnCode;
-    for(int i = 0; i < cmds; i++)
+	int i;
+    for(i = 0; i < cmds; i++)
     {
     	pid_t pid;
         int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
@@ -458,7 +461,8 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 
     		// STDOUT LOG
     		strcat(logOutBuf, "COMMAND:\t");
-    		for (int j = 0; j < cmds; j++)
+			int j;
+    		for (j = 0; j < cmds; j++)
     		{
     			strcat(logOutBuf, cmd[j]);
     			if (j != cmds-1)
@@ -485,7 +489,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 
     		// STDERR LOG
     		strcat(logErrBuf, "COMMAND:\t");
-    		for (int j = 0; j < cmds; j++)
+    		for (j = 0; j < cmds; j++)
     		{
     			strcat(logErrBuf, cmd[j]);
     			if (j != cmds-1)
@@ -571,9 +575,10 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 
         }
 
-        for (int i = 0; i < CMDSIZE/2; i++)
+		int k;
+        for (k = 0; k < CMDSIZE/2; k++)
     	{
-    		free(cmdSplitted[i]);
+    		free(cmdSplitted[k]);
     	}
     	free(cmdSplitted);
 	}
