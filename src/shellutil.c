@@ -71,14 +71,18 @@ void checkParameters(int argc, char ** argv)
 			shortFlag = strncmp(argv[i], "--maxlen=", 9);
 			if (logfileLenght == -1)  // not set yet
 			{
+				char * logfileLenghtString;
 				if (shortFlag)
 				{
-					logfileLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
+					logfileLenghtString = substring(argv[i], 3, strlen(argv[i])-1);
+					logfileLenght = atoi(logfileLenghtString);
 				}
 				else
 				{
-					logfileLenght = atoi(substring(argv[i], 9, strlen(argv[i])-1));
+					logfileLenghtString = substring(argv[i], 9, strlen(argv[i])-1); 
+					logfileLenght = atoi(logfileLenghtString);
 				}
+				free(logfileLenghtString);
 			}
 			else  // already set, error
 			{
@@ -97,14 +101,18 @@ void checkParameters(int argc, char ** argv)
 			shortFlag = strncmp(argv[i], "--size=", 7);
 			if (bufLenght == -1)  // not set yet
 			{
+				char * bufLenghtString;
 				if (shortFlag)
 				{
-					bufLenght = atoi(substring(argv[i], 3, strlen(argv[i])-1));
+					bufLenghtString = substring(argv[i], 3, strlen(argv[i])-1);
+					bufLenght = atoi(bufLenghtString);
 				}
 				else
 				{
-					bufLenght = atoi(substring(argv[i], 7, strlen(argv[i])-1));
+					bufLenghtString = substring(argv[i], 7, strlen(argv[i])-1); 
+					bufLenght = atoi(bufLenghtString);
 				}
+				free(bufLenghtString);
 			}
 			else  // already set, error
 			{
@@ -378,8 +386,6 @@ char * substring (char * src, int first, int last)
 
 int run (char ** cmd, const int cmds, FILE ** fd)
 {
-	int in_restore = dup(0);
-
 	int returnCode;
 	int i;
     for(i = 0; i < cmds; i++)
@@ -390,13 +396,11 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 		// find < or >, return the filename and delete it from the command
 		char * redirectFileName = redirect(&cmd[i], &out, &doubleChar);
 		//printf("Parsing redirezionamento: %s\n", commands[0]);
-		int out_restore;
 		int redirectFdOut, redirectFdIn;
 		if (redirectFileName != NULL)
 		{
 			if (out == 1)
 			{
-				out_restore = dup(1);
 				if (doubleChar == 0)  // a single >
 				{
 					redirectFdOut = open(redirectFileName, O_WRONLY | O_TRUNC | O_CREAT, 0777);
@@ -413,7 +417,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 				if (redirectFdIn == -1)  // TODO support for << command
 				{
 					fprintf(stderr, "shell: the file %s does not exist!\n\n", redirectFileName);
-					dup2(in_restore,0);  // restore stdin in case it has already been redirected for a piping
+					dup2(stdin_restore,0);  // restore stdin in case it has already been redirected for a piping
 					return 0; // an error has occurred, run return false
 				}
 				dup2(redirectFdIn,0);
@@ -491,7 +495,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 			}
 			else
 			{
-				dup2(in_restore,0);
+				dup2(stdin_restore,0);
 			}
 
     		// close file descriptors, we don't need to communicate with the child anymore
@@ -569,10 +573,6 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		logErrLen += strlen(logErrBuf);
 
     		// log file lenght handling
-			if (cmds > 1 && i != cmds-1)  // if this is  one (not the last) of more command we need to restore the stdin for dimension function
-			{
-				dup2(in_restore,0);
-			}
 			if (logOutLen > maxOutLogLenght)
     		{
     			printf("Log file dimension for the stdout excedeed.\n\n");
@@ -585,6 +585,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     				{
     					perror("Opening new file");
     				}
+    				free(newfilename);
     			}
                 logOutLen = strlen(logOutBuf);
     		}
@@ -600,18 +601,10 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     				{
     					perror("Opening new file");
     				}
+    				free(newfilename);
     			}
                 logErrLen = strlen(logErrBuf);
     		}
-			if (cmds > 1 && i != cmds-1)  // if this is one (not the last) of more command we need to restore the correct stdin for piping
-			{
-				pipe(fdIPC_out);  // we open he pipe again to write, using it for piping
-				dup2(fdIPC_out[READ],0);
-				close(fdIPC_out[READ]);
-				write(fdIPC_out[WRITE], buf, dim);
-				close(fdIPC_out[WRITE]);
-			}
-
 
     		fprintf(fd[0], "%s", logOutBuf);
     		fflush(fd[0]);
@@ -628,14 +621,15 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 			{
 				if (out == 1)
 				{
-					dup2(out_restore,1);
+					dup2(stdout_restore,1);
 					close(redirectFdOut);
 				}
 				else
 				{
-					dup2(in_restore,0);
+					dup2(stdin_restore,0);
 					close(redirectFdIn);
 				}
+				free(redirectFileName);
 			}
 
         }
@@ -661,77 +655,99 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 
 char * dimension (FILE * fd, int* logLength)
 {
-	printf("Type:\n");
-	printf("\te\texit\n");
-	printf("\to\toverwrite the existing file\n");
-	printf("\tc\tcreate a new file");
+	char * name = malloc(MAXLENGHT_FILENAME); // used only if the user chooses to create a new file
+	bzero(name, MAXLENGHT_FILENAME);
+	int littlePipe[2];
+	pipe(littlePipe);
 
-	// for getline
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t read = 0;
-
-	char *name = NULL; // used only if the user chooses to create a new file
-
-	char choice;
-	do
+	pid_t pid = fork();
+	if (pid == 0) // child
 	{
-		printf("\n\t>> ");
-		read = getline(&line, &len, stdin);
-		if (read != 2)
+		dup2(stdin_restore, 0);
+		dup2(stdout_restore, 1);
+		printf("Type:\n");
+		printf("\te\texit\n");
+		printf("\to\toverwrite the existing file\n");
+		printf("\tc\tcreate a new file");
+
+		// for getline
+		char *line = NULL;
+		size_t len = 0;
+		ssize_t read = 0;
+
+		char choice;
+		do
 		{
-			line[0] = 'a';  // 'a' represents invalid input
-		}
+			printf("\n\t>> ");
+			read = getline(&line, &len, stdin);
+			if (read != 2)
+			{
+				line[0] = 'a';  // 'a' represents invalid input
+			}
 
-		switch (line[0]) {
-			case 'e':
-			case 'E':
-				cExit(0);
-				break;
-			case 'o':
-			case 'O':
-				{
-					// ftruncate truncates the file at specified lenght. In this way we reset it
-					// fileno return the file descriptor of a FILE*
-					int err = ftruncate(fileno(fd), 0);
-					if (err < 0)
+			switch (line[0]) {
+				case 'e':
+				case 'E':
+					exit(69);
+					break;
+				case 'o':
+				case 'O':
 					{
-						printf("Failed in overwriting the file\n");
-						exit(1);
-					}
-				}
-				break;
-			case 'c':
-			case 'C':
-				{
-					char *inputLen = NULL;
-                    printf("New file name: ");
-					read = getline(&name, &len, stdin);
-					name = substring(name, 0, read-2); // delete last character \n
-                    int tempLogLenght = -1;
-                    do {
-                        printf("New log lenght dimension: ");
-						read = getline(&inputLen, &len, stdin);
-						tempLogLenght = atoi(inputLen);
-
-						if (tempLogLenght < MINLOGLEN)
+						// ftruncate truncates the file at specified lenght. In this way we reset it
+						// fileno return the file descriptor of a FILE*
+						int err = ftruncate(fileno(fd), 0);
+						if (err < 0)
 						{
-							printf("Log lenght dimension is too short. Minimum allowed size: %d\n", MINLOGLEN);
+							printf("Failed in overwriting the file\n");
+							exit(1);
 						}
-                    } while (tempLogLenght < MINLOGLEN); //TODO: if the user
-                            //has been born from the ass, this might crash
-                    *logLength = tempLogLenght;
-				}
-				break;
-			default:
-				{
-					printf("Choice %c not allowed.\n", choice);
-					choice = 'a';
-				}
-				break;
-		}
-	} while (line[0] == 'a');
+					}
+					break;
+				case 'c':
+				case 'C':
+					{
+						char *inputLen = NULL;
+	                    printf("New file name: ");
+						read = getline(&name, &len, stdin);
+						name = substring(name, 0, read-2); // delete last character \n
+	                    int tempLogLenght = -1;
+	                    do {
+	                        printf("New log lenght dimension: ");
+							read = getline(&inputLen, &len, stdin);
+							tempLogLenght = atoi(inputLen);
 
+							if (tempLogLenght < MINLOGLEN)
+							{
+								printf("Log lenght dimension is too short. Minimum allowed size: %d\n", MINLOGLEN);
+							}
+	                    } while (tempLogLenght < MINLOGLEN); //TODO: if the user
+	                            //has been born from the ass, this might crash
+	                    *logLength = tempLogLenght;
+					}
+					break;
+				default:
+					{
+						printf("Choice %c not allowed.\n", choice);
+						choice = 'a';
+					}
+					break;
+			}
+		} while (line[0] == 'a');
+		close(littlePipe[READ]);
+		write(littlePipe[WRITE], name, strlen(name));
+		close(littlePipe[WRITE]);
+		exit(0);
+	}
+	int returnCode;
+	wait(&returnCode);
+	if (WEXITSTATUS(returnCode) == 69)
+		cExit(0);
+	close(littlePipe[WRITE]);
+	read(littlePipe[READ], name, MAXLENGHT_FILENAME);
+	close(littlePipe[READ]);
+	if (name[0] == '\0')
+		return NULL;
+	printf("\nNew file name is %s\n\n", name);
 	return name;
 }
 

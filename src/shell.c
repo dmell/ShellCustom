@@ -21,6 +21,9 @@ int main(int argc, char **argv)
 	logfileLenght = -1;
 	bufLenght = -1;
 	code = 0;  // usato come bool per opzione codice uscita
+	stdin_restore = dup(0);
+	stdout_restore = dup(1);
+	stderr_restore = dup(2);
 
 	checkParameters(argc, argv);
 
@@ -43,7 +46,7 @@ int main(int argc, char **argv)
 
     //Brief description of the Shell
     printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.9 (May 22 2018)\n");
+    printf("v0.95 (May 24 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 

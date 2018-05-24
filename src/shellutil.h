@@ -11,6 +11,7 @@
 #define SEPARATOR "\n\n------------------------------------------------\n\n"
 #define DATESIZE 32
 #define LOGLAYOUT_DIM 4400
+#define MAXLENGHT_FILENAME 256
 
 /* global variables */
 int logOutLen; // logs' current dimension
@@ -20,7 +21,9 @@ char * errfile;
 int logfileLenght; // logs' lenght
 int bufLenght; // buffer's lenght
 int code; // flag to indicate if the user wants the return code of commands
-
+int stdin_restore;
+int stdout_restore;
+int stderr_restore;
 
 /* definitions of the functions */
 
