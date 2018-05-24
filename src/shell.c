@@ -107,11 +107,6 @@ int main(int argc, char **argv)
 		} while (operators[indexMultipleCommands-1] != 'e');
 		free(operators);
 		int i;
-		for(i = 0; i < indexMultipleCommands; i++)
-		{
-			free(commands[i]);
-		}
-		free(commands);
 	}
 
 	// free dynamic allocation of strings

@@ -198,10 +198,10 @@ char ** findMultipleCommands(char ** operators, char * line)
 	(*operators)[counter] = 'e';  // to indicate the end of the array
 
 	char ** multipleCommands = (char **)malloc((counter+1)*(sizeof(char*)));
-	for (i = 0; i < counter+1; i++)
+	/*for (i = 0; i < counter+1; i++)
 	{
 		multipleCommands[i] = (char*)malloc((CMDSIZE+1)*(sizeof(char)));
-	}
+	}*/
 
 	counter=0;
 	int first=0;
@@ -236,8 +236,6 @@ char ** findMultipleCommands(char ** operators, char * line)
 
 char** parseCommand (char * cmd, int * cmds)
 {
-	// TODO: maybe it would be cool to handle ; and && too
-
 	// counting commands by searching pipes
 	int index = 0;
 	do {
@@ -348,7 +346,7 @@ char * redirect(char ** line, int * out, int * doubleChar)
 char ** splitArgs (const char * cmd)
 {
 	// tmp is used because after this function the string changes
-	char tmp [strlen(cmd)];
+	char * tmp = malloc(strlen(cmd));
 	strcpy(tmp, cmd);
 	char * nextToken = strtok(tmp, " ");
 	char ** cleancmd = malloc((CMDSIZE/2)*(sizeof(char *)));
@@ -365,6 +363,7 @@ char ** splitArgs (const char * cmd)
 		i++;
 	}
 	cleancmd[i] = NULL;
+	free(tmp);
 	return cleancmd;
 }
 
