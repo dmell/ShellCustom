@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <time.h>
+#include <signal.h>
 #include "shellutil.h"
 #define READ 0
 #define WRITE 1
@@ -458,11 +459,9 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		dup2(fdIPC_err[WRITE], 2);
 
     		execvp(cmdSplitted[0], cmdSplitted);
-    		int commandError = errno;
-    		// TODO: setting an error flag to handle different logging
+    		//int commandError = errno;
     		fprintf(stderr,"%s: command not found\n",cmdSplitted[0]);
-    		//write(fdIPC_err[WRITE], "Command not found\n", strlen("Command not found\n"));
-    		exit(commandError);
+    		exit(255);
     	}
     	else // parent
     	{
@@ -513,59 +512,80 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		bzero(logOutBuf, LOGLAYOUT_DIM);
     		bzero(logErrBuf, LOGLAYOUT_DIM);
 
-    		// STDOUT LOG
-    		strcat(logOutBuf, "COMMAND:\t");
-			int j;
-    		for (j = 0; j < cmds; j++)
+    		if(returnCode == 255) // if the command doesn not exists
     		{
-    			strcat(logOutBuf, cmd[j]);
-    			if (j != cmds-1)
-    				strcat(logOutBuf, " | ");
+    			strcat(logOutBuf, "SYSTEM: sintax error for not valid command ");
+				int j;
+	    		for (j = 0; j < cmds; j++)
+	    		{
+	    			strcat(logOutBuf, cmd[j]);
+	    			if (j != cmds-1)
+	    				strcat(logOutBuf, " | ");
+	    		}
+	    		strcat(logErrBuf, "SYSTEM: sintax error for not valid command ");
+	    		for (j = 0; j < cmds; j++)
+	    		{
+	    			strcat(logErrBuf, cmd[j]);
+	    			if (j != cmds-1)
+	    				strcat(logErrBuf, " | ");
+	    		}
     		}
-    		if (cmds > 1)
+    		else
     		{
-    			strcat(logOutBuf, "\nSUBCOMMAND:\t");
-    			strcat(logOutBuf, cmd[i]);
-    		}
-    		strcat(logOutBuf, "\n\nDATE:\t\t");
-    		strcat(logOutBuf, date);
-    		strcat(logOutBuf, "\n\nOUTPUT:\n\n");
-    		strcat(logOutBuf, buf);
-    		if (code == 1)
-    		{
-    			strcat(logOutBuf, "\nRETURN CODE:\t");
-    			char * returnCodeString = malloc(3);
-    			sprintf(returnCodeString, "%d", returnCode);
-    			strcat(logOutBuf, returnCodeString);
-    			free(returnCodeString);
+    			// STDOUT LOG
+	    		strcat(logOutBuf, "COMMAND:\t");
+				int j;
+	    		for (j = 0; j < cmds; j++)
+	    		{
+	    			strcat(logOutBuf, cmd[j]);
+	    			if (j != cmds-1)
+	    				strcat(logOutBuf, " | ");
+	    		}
+	    		if (cmds > 1)
+	    		{
+	    			strcat(logOutBuf, "\nSUBCOMMAND:\t");
+	    			strcat(logOutBuf, cmd[i]);
+	    		}
+	    		strcat(logOutBuf, "\n\nDATE:\t\t");
+	    		strcat(logOutBuf, date);
+	    		strcat(logOutBuf, "\n\nOUTPUT:\n\n");
+	    		strcat(logOutBuf, buf);
+	    		if (code == 1)
+	    		{
+	    			strcat(logOutBuf, "\nRETURN CODE:\t");
+	    			char * returnCodeString = malloc(3);
+	    			sprintf(returnCodeString, "%d", returnCode);
+	    			strcat(logOutBuf, returnCodeString);
+	    			free(returnCodeString);
+	    		}
+
+	    		// STDERR LOG
+	    		strcat(logErrBuf, "COMMAND:\t");
+	    		for (j = 0; j < cmds; j++)
+	    		{
+	    			strcat(logErrBuf, cmd[j]);
+	    			if (j != cmds-1)
+	    				strcat(logErrBuf, " | ");
+	    		}
+	    		if (cmds > 1)
+	    		{
+	    			strcat(logErrBuf, "\nSUBCOMMAND:\t");
+	    			strcat(logErrBuf, cmd[i]);
+	    		}
+	    		strcat(logErrBuf, "\n\nDATE:\t\t");
+	    		strcat(logErrBuf, date);
+	    		strcat(logErrBuf, "\n\nERROR OUTPUT:\n\n");
+	    		strcat(logErrBuf, buf2);
+	    		if (code == 1)
+	    		{
+	    			strcat(logErrBuf, "\nRETURN CODE:\t");
+	    			char * returnCodeString = malloc(3);
+	    			sprintf(returnCodeString, "%d", returnCode);
+	    			strcat(logErrBuf, returnCodeString);
+	    			free(returnCodeString);
+	    		}
     		}
     		strcat(logOutBuf, SEPARATOR);
-
-    		// STDERR LOG
-    		strcat(logErrBuf, "COMMAND:\t");
-    		for (j = 0; j < cmds; j++)
-    		{
-    			strcat(logErrBuf, cmd[j]);
-    			if (j != cmds-1)
-    				strcat(logErrBuf, " | ");
-    		}
-    		if (cmds > 1)
-    		{
-    			strcat(logErrBuf, "\nSUBCOMMAND:\t");
-    			strcat(logErrBuf, cmd[i]);
-    		}
-    		strcat(logErrBuf, "\n\nDATE:\t\t");
-    		strcat(logErrBuf, date);
-    		strcat(logErrBuf, "\n\nERROR OUTPUT:\n\n");
-    		strcat(logErrBuf, buf2);
-    		if (code == 1)
-    		{
-    			strcat(logErrBuf, "\nRETURN CODE:\t");
-    			char * returnCodeString = malloc(3);
-    			sprintf(returnCodeString, "%d", returnCode);
-    			strcat(logErrBuf, returnCodeString);
-    			free(returnCodeString);
-    		}
     		strcat(logErrBuf, SEPARATOR);
 
     		logOutLen += strlen(logOutBuf);
@@ -719,8 +739,7 @@ char * dimension (FILE * fd, int* logLength)
 							{
 								printf("Log lenght dimension is too short. Minimum allowed size: %d\n", MINLOGLEN);
 							}
-	                    } while (tempLogLenght < MINLOGLEN); //TODO: if the user
-	                            //has been born from the ass, this might crash
+	                    } while (tempLogLenght < MINLOGLEN);
 	                    *logLength = tempLogLenght;
 					}
 					break;

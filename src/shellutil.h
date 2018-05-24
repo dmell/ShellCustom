@@ -38,7 +38,7 @@ void showManual();
 /* extracts a substring between given indexes */
 char * substring (char * src, int first, int last);
 /* handles the commands */
-char** parseCommand (char * cmd, int * cmds);  // TODO: unire parseCommand e splitArgs in un'unica funzione
+char** parseCommand (char * cmd, int * cmds);
 /* divides the commands */
 char ** splitArgs (const char * cmd);
 /* execute the commands */
