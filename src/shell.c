@@ -87,44 +87,6 @@ int main(int argc, char **argv)
 			   ((operators[indexMultipleCommands-1] == '&') && (valuePreviousCommand == 1)) ||  // previous command is true and this command follows a && operator
 			   (operators[indexMultipleCommands-1] == ';'))  // this command follows a ; operator
 			{
-				// redirezionamento
-				int out = 0; // used as boolean to check if there's a < or a > character
-				int doubleChar = 0; // used as boolean to check if there's >/< or >>/<<
-				// find < or >, return the filename and delete it from the command
-				char * redirectFileName = redirect(&commands[indexMultipleCommands], &out, &doubleChar);
-				//printf("Parsing redirezionamento: %s\n", commands[0]);
-				int in_restore, out_restore, err_restore;
-				int redirectFdOut, redirectFdIn;
-				if (redirectFileName != NULL)
-				{
-					if (out == 1)
-					{
-					 	out_restore = dup(1);
-						err_restore = dup(2);
-						if (doubleChar == 0)  // a single >
-						{
-							redirectFdOut = open(redirectFileName, O_WRONLY | O_TRUNC | O_CREAT, 0777);
-						}
-						else // a double >>
-						{
-							redirectFdOut = open(redirectFileName, O_WRONLY | O_APPEND | O_CREAT, 0777);
-						}
-						dup2(redirectFdOut,1);
-						dup2(redirectFdOut,2);
-					}
-					else
-					{
-						in_restore = dup(0);
-						redirectFdIn = open(redirectFileName, O_RDONLY, 0777);
-						if (redirectFdIn == -1)  // TODO support for << command
-						{
-							fprintf(stderr, "shell: the file %s does not exist!\n", redirectFileName);
-							continue;
-						}
-						dup2(redirectFdIn,0);
-					}
-				}
-
 				cmd = parseCommand(commands[indexMultipleCommands], &cmds);
 				//printf("Parsing pipe: %s\n", cmd[0]);
 				valuePreviousCommand = run(cmd, cmds, fd);
@@ -137,21 +99,6 @@ int main(int argc, char **argv)
 				free(cmd);
 
 				cmds = 1;
-
-				if (redirectFileName != NULL)  // restore the normal stdin and stdout
-				{
-					if (out == 1)
-					{
-						dup2(out_restore,1);
-						dup2(err_restore,2);
-						close(redirectFdOut);
-					}
-					else
-					{
-						dup2(in_restore,0);
-						close(redirectFdIn);
-					}
-				}
 			}
 			indexMultipleCommands++;
 		} while (operators[indexMultipleCommands-1] != 'e');

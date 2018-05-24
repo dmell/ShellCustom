@@ -279,7 +279,7 @@ char * redirect(char ** line, int * out, int * doubleChar)
 	{
 		if ((*line)[i] == '>')
 		{
-			endCommand = i;  // point where the commands end
+			endCommand = i-1;  // point where the commands end
 			if ((*line)[i+1] == '>')  // check if there is > or >>
 			{
 				i++;
@@ -289,17 +289,25 @@ char * redirect(char ** line, int * out, int * doubleChar)
 			{
 				i++;
 			}
-			name = substring(*line, i+1, strlen(*line)-2);
+			name = substring(*line, i+1, strlen(*line)-1);
 			newline = substring(*line, 0, endCommand);
 			bzero(*line, strlen(*line));
 			strcpy(*line, newline);
 			free(newline);
 			*out = 1;
+
+			int a=strlen(name)-1;
+			while (name[a] == ' ')  // remove spaces at the end of the name
+			{
+				name[a]='\0';
+				a--;
+			}
+
 			return name;
 		}
 		else if ((*line)[i] == '<')
 		{
-			endCommand = i;
+			endCommand = i-1;
 			if ((*line)[i+1] == '<')  // check if there is < or <<
 			{
 				i++;
@@ -309,16 +317,24 @@ char * redirect(char ** line, int * out, int * doubleChar)
 			{
 				i++;
 			}
-			name = substring(*line, i+1, strlen(*line)-2);
+			name = substring(*line, i+1, strlen(*line)-1);
 			newline = substring(*line, 0, endCommand);
 			bzero(*line, strlen(*line));
 			strcpy(*line, newline);
 			free(newline);
 			*out = 0;
+
+			int a=strlen(name)-1;
+			while (name[a] == ' ')  // remove spaces at the end of the name
+			{
+				name[a]='\0';
+				a--;
+			}
+
 			return name;
 		}
 	}
-	return name;
+	return name;  // return NULL, not setted
 }
 
 char ** splitArgs (const char * cmd)
@@ -362,14 +378,49 @@ char * substring (char * src, int first, int last)
 
 int run (char ** cmd, const int cmds, FILE ** fd)
 {
-	int in_restore = dup(0); // we will use in_restore to restore stdin after dup2
-	//int out_backup = dup(1); // a backup of stdout, for debugging purpose
-	//printf("run arguments: %s %s \n", cmd[0], cmd[1]);
+	int in_restore = dup(0);
 
 	int returnCode;
 	int i;
     for(i = 0; i < cmds; i++)
     {
+		// redirezionamento
+		int out = 0; // used as boolean to check if there's a < or a > character
+		int doubleChar = 0; // used as boolean to check if there's >/< or >>/<<
+		// find < or >, return the filename and delete it from the command
+		char * redirectFileName = redirect(&cmd[i], &out, &doubleChar);
+		//printf("Parsing redirezionamento: %s\n", commands[0]);
+		int out_restore;
+		int redirectFdOut, redirectFdIn;
+		if (redirectFileName != NULL)
+		{
+			if (out == 1)
+			{
+				out_restore = dup(1);
+				if (doubleChar == 0)  // a single >
+				{
+					redirectFdOut = open(redirectFileName, O_WRONLY | O_TRUNC | O_CREAT, 0777);
+				}
+				else // a double >>
+				{
+					redirectFdOut = open(redirectFileName, O_WRONLY | O_APPEND | O_CREAT, 0777);
+				}
+				dup2(redirectFdOut,1);
+			}
+			else
+			{
+				redirectFdIn = open(redirectFileName, O_RDONLY, 0777);
+				if (redirectFdIn == -1)  // TODO support for << command
+				{
+					fprintf(stderr, "shell: the file %s does not exist!\n\n", redirectFileName);
+					dup2(in_restore,0);  // restore stdin in case it has already been redirected for a piping
+					return 0; // an error has occurred, run return false
+				}
+				dup2(redirectFdIn,0);
+			}
+		}
+
+
     	pid_t pid;
         int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
         int maxErrLogLenght = logfileLenght; // relative dimension of the log files
@@ -572,6 +623,20 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     	        printf("%s", buf);  // print the stdout in the shell
     	        printf("%s\n", buf2);  // print the stderr in the shell
             }
+
+			if (redirectFileName != NULL)  // restore the normal stdin and stdout if redirected
+			{
+				if (out == 1)
+				{
+					dup2(out_restore,1);
+					close(redirectFdOut);
+				}
+				else
+				{
+					dup2(in_restore,0);
+					close(redirectFdIn);
+				}
+			}
 
         }
 
