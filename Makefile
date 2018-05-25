@@ -11,5 +11,5 @@ folders:
 
 shell:
 	@echo "Shell is compiling..."
-	@gcc -std=gnu90 -o shell ./src/shellutil.c ./src/shell.c
+	@gcc -std=gnu90 -o shell ./src/shellutil.c ./src/parsers.c ./src/run.c ./src/commons.c ./src/shell.c
 	@mv shell ./bin

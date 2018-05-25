@@ -1,14 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <time.h>
+#include "commons.h"
 #include "shellutil.h"
+#include "parsers.h"
+#include "run.h"
 
 int main(int argc, char **argv)
 {
@@ -24,7 +17,7 @@ int main(int argc, char **argv)
 	stdin_restore = dup(0);
 	stdout_restore = dup(1);
 	stderr_restore = dup(2);
-	killed = 1; // not yet killed 
+	killed = 1; // not yet killed
 
 	checkParameters(argc, argv);
 
