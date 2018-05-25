@@ -170,8 +170,6 @@ void showManual()
 	exit(0);
 }
 
-
-
 char ** findMultipleCommands(char ** operators, char * line)
 {
 	int counter = 0;
@@ -384,6 +382,12 @@ char * substring (char * src, int first, int last)
 	return res;
 }
 
+void handler (int sig)
+{
+	fprintf(stderr, " Interactive commands not supported.\n");
+	killed = kill(pid, SIGKILL);
+}
+
 int run (char ** cmd, const int cmds, FILE ** fd)
 {
 	int returnCode;
@@ -425,7 +429,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 		}
 
 
-    	pid_t pid;
+    	//pid_t pid;
         int maxOutLogLenght = logfileLenght; // Two variables to handle separately the
         int maxErrLogLenght = logfileLenght; // relative dimension of the log files
     	// date and time of the execution
@@ -465,10 +469,12 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     	}
     	else // parent
     	{
+    		signal(SIGINT, handler);
     		wait(&returnCode);
     		returnCode = WEXITSTATUS(returnCode);
 			close(fdIPC_out[WRITE]);
     		close(fdIPC_err[WRITE]);
+    		signal(SIGINT, SIG_DFL);
 
     		//INITIALIZING BUFFERS
     		char buf[MAXBUF]; // stdout buff
@@ -512,29 +518,21 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		bzero(logOutBuf, LOGLAYOUT_DIM);
     		bzero(logErrBuf, LOGLAYOUT_DIM);
 
-    		if(returnCode == 255) // if the command doesn not exists
+    		int j;
+    		if(returnCode == 255) // if the command does not exists
     		{
     			strcat(logOutBuf, "SYSTEM: sintax error for not valid command ");
-				int j;
 	    		for (j = 0; j < cmds; j++)
 	    		{
 	    			strcat(logOutBuf, cmd[j]);
 	    			if (j != cmds-1)
 	    				strcat(logOutBuf, " | ");
 	    		}
-	    		strcat(logErrBuf, "SYSTEM: sintax error for not valid command ");
-	    		for (j = 0; j < cmds; j++)
-	    		{
-	    			strcat(logErrBuf, cmd[j]);
-	    			if (j != cmds-1)
-	    				strcat(logErrBuf, " | ");
-	    		}
     		}
     		else
     		{
     			// STDOUT LOG
 	    		strcat(logOutBuf, "COMMAND:\t");
-				int j;
 	    		for (j = 0; j < cmds; j++)
 	    		{
 	    			strcat(logOutBuf, cmd[j]);
@@ -553,38 +551,38 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 	    		if (code == 1)
 	    		{
 	    			strcat(logOutBuf, "\nRETURN CODE:\t");
-	    			char * returnCodeString = malloc(3);
-	    			sprintf(returnCodeString, "%d", returnCode);
-	    			strcat(logOutBuf, returnCodeString);
-	    			free(returnCodeString);
+	    			char * tella = malloc(3);
+	    			sprintf(tella, "%d", returnCode);
+	    			strcat(logOutBuf, tella);
+	    			free(tella);
 	    		}
-
-	    		// STDERR LOG
-	    		strcat(logErrBuf, "COMMAND:\t");
-	    		for (j = 0; j < cmds; j++)
-	    		{
-	    			strcat(logErrBuf, cmd[j]);
-	    			if (j != cmds-1)
-	    				strcat(logErrBuf, " | ");
-	    		}
-	    		if (cmds > 1)
-	    		{
-	    			strcat(logErrBuf, "\nSUBCOMMAND:\t");
-	    			strcat(logErrBuf, cmd[i]);
-	    		}
-	    		strcat(logErrBuf, "\n\nDATE:\t\t");
-	    		strcat(logErrBuf, date);
-	    		strcat(logErrBuf, "\n\nERROR OUTPUT:\n\n");
-	    		strcat(logErrBuf, buf2);
-	    		if (code == 1)
-	    		{
-	    			strcat(logErrBuf, "\nRETURN CODE:\t");
-	    			char * returnCodeString = malloc(3);
-	    			sprintf(returnCodeString, "%d", returnCode);
-	    			strcat(logErrBuf, returnCodeString);
-	    			free(returnCodeString);
-	    		}
+	    	}
+    		// STDERR LOG
+    		strcat(logErrBuf, "COMMAND:\t");
+    		for (j = 0; j < cmds; j++)
+    		{
+    			strcat(logErrBuf, cmd[j]);
+    			if (j != cmds-1)
+    				strcat(logErrBuf, " | ");
     		}
+    		if (cmds > 1)
+    		{
+    			strcat(logErrBuf, "\nSUBCOMMAND:\t");
+    			strcat(logErrBuf, cmd[i]);
+    		}
+    		strcat(logErrBuf, "\n\nDATE:\t\t");
+    		strcat(logErrBuf, date);
+    		strcat(logErrBuf, "\n\nERROR OUTPUT:\n\n");
+    		strcat(logErrBuf, buf2);
+    		if (code == 1)
+    		{
+    			strcat(logErrBuf, "\nRETURN CODE:\t");
+    			char * tella = malloc(3);
+    			sprintf(tella, "%d", returnCode);
+    			strcat(logErrBuf, tella);
+    			free(tella);
+    		}
+ 
     		strcat(logOutBuf, SEPARATOR);
     		strcat(logErrBuf, SEPARATOR);
 
@@ -630,11 +628,15 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		fprintf(fd[1], "%s", logErrBuf);
     		fflush(fd[1]);
 
-            if(i == cmds-1)
+            if (killed != 0) // normal process flow
             {
-    	        printf("%s", buf);  // print the stdout in the shell
-    	        printf("%s\n", buf2);  // print the stderr in the shell
+            	if(i == cmds-1 )
+            	{
+    	        	printf("%s", buf);  // print the stdout in the shell
+            	}
+            	printf("%s\n", buf2);  // print the stderr in the shell
             }
+            killed = 1;
 
 			if (redirectFileName != NULL)  // restore the normal stdin and stdout if redirected
 			{

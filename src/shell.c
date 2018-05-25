@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 	stdin_restore = dup(0);
 	stdout_restore = dup(1);
 	stderr_restore = dup(2);
+	killed = 1; // not yet killed 
 
 	checkParameters(argc, argv);
 
@@ -45,8 +46,8 @@ int main(int argc, char **argv)
 	int cmds=1;  // there's always one command
 
     //Brief description of the Shell
-    printf("Sfssfsfsfsffssstackframe's Custom shell\n");
-    printf("v0.95 (May 24 2018)\n");
+    printf("CUSTOM SHELL - 185322, 186291, 186893\n");
+    printf("v1.0 (May 25 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 
@@ -119,5 +120,6 @@ int main(int argc, char **argv)
 		perror("fclose");
 		exit(1);
 	}
+	printf("Goodbye\n");
 	return 0;
 }

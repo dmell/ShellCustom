@@ -24,6 +24,8 @@ int code; // flag to indicate if the user wants the return code of commands
 int stdin_restore;
 int stdout_restore;
 int stderr_restore;
+pid_t pid; // command process pid
+int killed; // true only if the process has been killed by the user
 
 /* definitions of the functions */
 
@@ -47,5 +49,6 @@ int run (char ** cmd, const int cmds, FILE ** fd);
 char * dimension(FILE * fd, int *);
 /* custom exit function */
 void cExit(int code);
+void handler (int sig);
 
 #endif
