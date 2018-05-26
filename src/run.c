@@ -3,7 +3,7 @@
 #include "parsers.h"
 #include "run.h"
 
-int run (char ** cmd, const int cmds, FILE ** fd)
+int run (char ** cmd, const int cmds, FILE ** f)
 {
 	int returnCode;
 	int i;
@@ -28,7 +28,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 				{
 					redirectFdOut = open(redirectFileName, O_WRONLY | O_APPEND | O_CREAT, 0777);
 				}
-				dup2(redirectFdOut,1);
+				dup2(redirectFdOut,STDOUT_FILENO);
 			}
 			else
 			{
@@ -36,10 +36,10 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 				if (redirectFdIn == -1)  // TODO support for << command
 				{
 					fprintf(stderr, "shell: the file %s does not exist!\n\n", redirectFileName);
-					dup2(stdin_restore,0);  // restore stdin in case it has already been redirected for a piping
+					dup2(stdin_restore,STDIN_FILENO);  // restore stdin in case it has already been redirected for a piping
 					return 0; // an error has occurred, run return false
 				}
-				dup2(redirectFdIn,0);
+				dup2(redirectFdIn,STDIN_FILENO);
 			}
 		}
 
@@ -74,8 +74,8 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		//	printf("Command %s, child process\n", cmd);
     		close(fdIPC_out[READ]); // child doesn't read
     		close(fdIPC_err[READ]);
-    		dup2(fdIPC_out[WRITE], 1);
-    		dup2(fdIPC_err[WRITE], 2);
+    		dup2(fdIPC_out[WRITE], STDOUT_FILENO);
+    		dup2(fdIPC_err[WRITE], STDERR_FILENO);
 
     		execvp(cmdSplitted[0], cmdSplitted);
     		//int commandError = errno;
@@ -84,7 +84,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     	}
     	else // parent
     	{
-    		signal(SIGINT, handler);
+    		signal(SIGSTOP, handler);
     		wait(&returnCode);
     		returnCode = WEXITSTATUS(returnCode);
 			close(fdIPC_out[WRITE]);
@@ -106,7 +106,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 			if (i != cmds-1)  // if this is not the last command we send the output to the next command
 			{
 				pipe(fdIPC_out);  // we open he pipe again to write, using it for piping
-				dup2(fdIPC_out[READ],0);
+				dup2(fdIPC_out[READ],STDIN_FILENO);
 				close(fdIPC_out[READ]);
 				write(fdIPC_out[WRITE], buf, dim);
 				close(fdIPC_out[WRITE]);
@@ -114,7 +114,7 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 			}
 			else
 			{
-				dup2(stdin_restore,0);
+				dup2(stdin_restore,STDIN_FILENO);
 			}
 
     		// close file descriptors, we don't need to communicate with the child anymore
@@ -208,12 +208,12 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 			if (logOutLen > maxOutLogLenght)
     		{
     			printf("Log file dimension for the stdout excedeed.\n\n");
-    			char * newfilename = dimension (fd[0], &maxOutLogLenght);
+    			char * newfilename = dimension (f[0], &maxOutLogLenght);
     			if (newfilename != NULL)
     			{
-    				fclose(fd[0]);
-    				fd[0] = fopen(newfilename, "w");
-    				if (fd[0] == NULL)
+    				fclose(f[0]);
+    				f[0] = fopen(newfilename, "w");
+    				if (f[0] == NULL)
     				{
     					perror("Opening new file");
     				}
@@ -224,12 +224,12 @@ int run (char ** cmd, const int cmds, FILE ** fd)
     		if (logErrLen > maxErrLogLenght)
     		{
     			printf("Log file dimension for the stderr excedeed.\n\n");
-                char * newfilename = dimension (fd[1], &maxErrLogLenght);
+                char * newfilename = dimension (f[1], &maxErrLogLenght);
                 if (newfilename != NULL)
     			{
-    				fclose(fd[1]);
-    				fd[1] = fopen(newfilename, "w");
-    				if (fd[1] == NULL)
+    				fclose(f[1]);
+    				f[1] = fopen(newfilename, "w");
+    				if (f[1] == NULL)
     				{
     					perror("Opening new file");
     				}
@@ -238,10 +238,10 @@ int run (char ** cmd, const int cmds, FILE ** fd)
                 logErrLen = strlen(logErrBuf);
     		}
 
-    		fprintf(fd[0], "%s", logOutBuf);
-    		fflush(fd[0]);
-    		fprintf(fd[1], "%s", logErrBuf);
-    		fflush(fd[1]);
+    		fprintf(f[0], "%s", logOutBuf);
+    		fflush(f[0]);
+    		fprintf(f[1], "%s", logErrBuf);
+    		fflush(f[1]);
 
             if (killed != 0) // normal process flow
             {
@@ -257,12 +257,12 @@ int run (char ** cmd, const int cmds, FILE ** fd)
 			{
 				if (out == 1)
 				{
-					dup2(stdout_restore,1);
+					dup2(stdout_restore,STDOUT_FILENO);
 					close(redirectFdOut);
 				}
 				else
 				{
-					dup2(stdin_restore,0);
+					dup2(stdin_restore,STDIN_FILENO);
 					close(redirectFdIn);
 				}
 				free(redirectFileName);
