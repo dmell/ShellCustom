@@ -1,6 +1,15 @@
+/*
+
+library of various functions used in the program
+
+*/
+
+
+
 #include "commons.h"
 #include "shellutil.h"
 
+// extract the values of the comman line parameters given by the user when program is run
 void checkParameters(int argc, char ** argv)
 {
 	int shortFlag; // we will use this to handle the double option to gives args
@@ -10,7 +19,7 @@ void checkParameters(int argc, char ** argv)
 		// if man has been requested
 		if (strcmp("--help",argv[i]) == 0)
 		{
-			showManual();
+			showManual();  // NB showManual will exit
 		}
 
 		if (strncmp(argv[i], "-o=", 3) == 0 || strncmp(argv[i], "--outfile=", 10) == 0)  // outfile
@@ -20,11 +29,11 @@ void checkParameters(int argc, char ** argv)
 			{
 				if (shortFlag)
 				{
-					outfile = substring(argv[i], 3, strlen(argv[i])-1);
+					outfile = substring(argv[i], 3, strlen(argv[i])-1);  // extract out file name
 				}
 				else
 				{
-					outfile = substring(argv[i], 10, strlen(argv[i])-1);
+					outfile = substring(argv[i], 10, strlen(argv[i])-1);  // extract out file name
 				}
 			}
 			else  // already set, error
@@ -41,11 +50,11 @@ void checkParameters(int argc, char ** argv)
 			{
 				if (shortFlag)
 				{
-					errfile = substring(argv[i], 3, strlen(argv[i])-1);
+					errfile = substring(argv[i], 3, strlen(argv[i])-1);  // extract err file name
 				}
 				else
 				{
-					errfile = substring(argv[i], 10, strlen(argv[i])-1);
+					errfile = substring(argv[i], 10, strlen(argv[i])-1);  // extract err file name
 				}
 			}
 			else  // already set, error
@@ -63,13 +72,15 @@ void checkParameters(int argc, char ** argv)
 				char * logfileLenghtString;
 				if (shortFlag)
 				{
+					// extract logfileLenght
 					logfileLenghtString = substring(argv[i], 3, strlen(argv[i])-1);
-					logfileLenght = atoi(logfileLenghtString);
+					logfileLenght = atoi(logfileLenghtString);  // set logfileLenght
 				}
 				else
 				{
+					// extract logfileLenght
 					logfileLenghtString = substring(argv[i], 9, strlen(argv[i])-1);
-					logfileLenght = atoi(logfileLenghtString);
+					logfileLenght = atoi(logfileLenghtString);  // set logfileLenght
 				}
 				free(logfileLenghtString);
 			}
@@ -80,10 +91,10 @@ void checkParameters(int argc, char ** argv)
 				exit(1);
 			}
 		}
+		// find code flag that allow to print return code in the logs
 		else if (strncmp(argv[i], "-c", 2) == 0 || strncmp(argv[i], "--code", 6) == 0)
 		{
 			code = 1; // the flag is set to include return code of the commands
-			// N.B.: you can do it multiple times
 		}
 		else if (strncmp(argv[i], "-s=", 3) == 0 || strncmp(argv[i], "--size=", 7) == 0)  // buffer lenght
 		{
@@ -93,13 +104,15 @@ void checkParameters(int argc, char ** argv)
 				char * bufLenghtString;
 				if (shortFlag)
 				{
+					// extract bufLenght
 					bufLenghtString = substring(argv[i], 3, strlen(argv[i])-1);
-					bufLenght = atoi(bufLenghtString);
+					bufLenght = atoi(bufLenghtString);  // set bufLenght
 				}
 				else
 				{
+					// extract bufLenght
 					bufLenghtString = substring(argv[i], 7, strlen(argv[i])-1);
-					bufLenght = atoi(bufLenghtString);
+					bufLenght = atoi(bufLenghtString);  // set bufLenght
 				}
 				free(bufLenghtString);
 			}
@@ -112,12 +125,15 @@ void checkParameters(int argc, char ** argv)
 		}
 	}
 
-	if (logfileLenght == -1)  // if the maximum length has not been specified
-	logfileLenght = DEFAULTLOGLEN;  // default
+	if (logfileLenght == -1)  // if the maximum length for the file has not been specified
+		logfileLenght = DEFAULTLOGLEN;  // default
 
-	if (bufLenght == -1)
-	bufLenght = MAXBUF;
+	if (bufLenght == -1)  // if the maximum length for the output has not been specified
+		bufLenght = MAXBUF;  // default
 
+
+	// logfileLenght has a minimum value
+	// output can't be longer than logfileLenght
 	if (logfileLenght < MINLOGLEN || logfileLenght < bufLenght)
 	{
 		printf("shell: error in buffer or file size.\n");
@@ -125,7 +141,7 @@ void checkParameters(int argc, char ** argv)
 		exit(1);
 	}
 
-	// we check that the user has specified the log files
+	// we check that the user has specified the log files (mandatory)
 	if (outfile == NULL || errfile == NULL)
 	{
 		printf("shell: missing mandatory parameter.\n");
@@ -133,7 +149,7 @@ void checkParameters(int argc, char ** argv)
 		exit(1);
 	}
 
-	// we check that outfile name is different from errfile NAMEFILE
+	// we check that outfile name is different from errfile
 	if (strcmp(outfile,errfile) == 0)
 	{
 		printf("shell: outfile and errfile parameters cannot be the same.\n");
@@ -142,34 +158,44 @@ void checkParameters(int argc, char ** argv)
 	}
 }
 
+// print user manual and exit
 void showManual()
 {
 	printf("Usage: ./shell [PARAMETERS]\n");
 	printf("Run the Custom Shell\n\n");
 	printf("Mandatory parameters:\n");
-	printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout\n\n");
-	printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr\n\n");
+	printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout.\n\n");
+	printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr.\n\n");
+	printf("\t\t\t\t\t\toutfile and errfile can not be equals.\n\n");
 	printf("Optional parameters:\n");
+	printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands.\n\n");
 	printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
-	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default)\n\n", DEFAULTLOGLEN);
-	printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands\n\n");
+	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default).\n", DEFAULTLOGLEN);
+	printf("\t\t\t\t\t\tmaxlen can not be shorter than %d.\n\n", MINLOGLEN);
 	printf("  -s[=NUMBER], --size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
-	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default)\n", MAXBUF);
+	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default).\n", MAXBUF);
+	printf("\t\t\t\t\t\tmaxlen can not be shorter than size.\n");
 	exit(0);
 }
 
+
+// check if there's a redirect character < << >
+// in case of redirection, the function delete the name of the file from the
+// command and returns the name of the file.
+// flag out passed by reference distinguish an in or out redirection
+// flag doubleChar passed by reference distinguish append command <<
 char * redirect(char ** line, int * out, int * doubleChar)
 {
-	char * name = NULL;
-	char * newline = NULL;
+	char * name = NULL;  // return value
+	char * newline = NULL;  // tmp support string
 	int i;
 	int endCommand;
 	for (i=0; i < strlen(*line); i++)
 	{
-		if ((*line)[i] == '>')
+		if ((*line)[i] == '>')  // find a >
 		{
-			endCommand = i-1;  // point where the commands end
-			if ((*line)[i+1] == '>')  // check if there is > or >>
+			endCommand = i-1;  // point where the commands end (for the extraction of the command)
+			if ((*line)[i+1] == '>')  // check if there is >>
 			{
 				i++;
 				*doubleChar = 1;
@@ -178,12 +204,13 @@ char * redirect(char ** line, int * out, int * doubleChar)
 			{
 				i++;
 			}
-			name = substring(*line, i+1, strlen(*line)-1);
+			name = substring(*line, i+1, strlen(*line)-1);  // extract the file name
+			// delete the name of the file from the command
 			newline = substring(*line, 0, endCommand);
 			bzero(*line, strlen(*line));
 			strcpy(*line, newline);
 			free(newline);
-			*out = 1;
+			*out = 1;  // set out flag, there's an output redirection
 
 			int a=strlen(name)-1;
 			while (name[a] == ' ')  // remove spaces at the end of the name
@@ -194,10 +221,10 @@ char * redirect(char ** line, int * out, int * doubleChar)
 
 			return name;
 		}
-		else if ((*line)[i] == '<')
+		else if ((*line)[i] == '<')  // find a <
 		{
-			endCommand = i-1;
-			if ((*line)[i+1] == '<')  // check if there is < or <<
+			endCommand = i-1;  // point where the commands end (for the extraction of the command)
+			if ((*line)[i+1] == '<')  // check if there is <<
 			{
 				i++;
 				*doubleChar = 1;
@@ -206,12 +233,13 @@ char * redirect(char ** line, int * out, int * doubleChar)
 			{
 				i++;
 			}
-			name = substring(*line, i+1, strlen(*line)-1);
+			name = substring(*line, i+1, strlen(*line)-1);  // extract the name
+			// delete the name of the file from the command
 			newline = substring(*line, 0, endCommand);
 			bzero(*line, strlen(*line));
 			strcpy(*line, newline);
 			free(newline);
-			*out = 0;
+			*out = 0;  // set the out flag, there's an input redirection
 
 			int a=strlen(name)-1;
 			while (name[a] == ' ')  // remove spaces at the end of the name
@@ -223,20 +251,29 @@ char * redirect(char ** line, int * out, int * doubleChar)
 			return name;
 		}
 	}
-	return name;  // return NULL, not setted
+	return name;  // return NULL, if not setted
 }
 
+
+// handling of a log file dimension limit
+// the function let the user choose between exit from the program,
+// overwrite the current log file (with ftruncate on the file descriptor)
+// or create a new log file. In this last case the function return the new
+// file name and the new dimension to run function, that changes the settings
 char * dimension (FILE * fd, int* logLength)
 {
 	char * name = malloc(MAXLENGHT_FILENAME); // used only if the user chooses to create a new file
 	bzero(name, MAXLENGHT_FILENAME);
+
+	// this pipe allow to get a new file name from the child of the fork
 	int littlePipe[2];
 	pipe(littlePipe);
 
+	// a new process allow to avoid problems with stdin/stdout duplicated in other points of the program
 	pid_t pid = fork();
 	if (pid == 0) // child
 	{
-		dup2(stdin_restore, 0);
+		dup2(stdin_restore, 0);  // restore normale stdin or stdout for user interaction
 		dup2(stdout_restore, 1);
 		printf("Type:\n");
 		printf("\te\texit\n");
@@ -252,7 +289,7 @@ char * dimension (FILE * fd, int* logLength)
 		do
 		{
 			printf("\n\t>> ");
-			read = getline(&line, &len, stdin);
+			read = getline(&line, &len, stdin);  // read user choice
 			if (read != 2)
 			{
 				line[0] = 'a';  // 'a' represents invalid input
@@ -261,11 +298,12 @@ char * dimension (FILE * fd, int* logLength)
 			switch (line[0]) {
 				case 'e':
 				case 'E':
-					exit(69);
+					exit(69);  // user choose to exit
 					break;
 				case 'o':
 				case 'O':
 					{
+						// user choose to overwrite the current file
 						// ftruncate truncates the file at specified lenght. In this way we reset it
 						// fileno return the file descriptor of a FILE*
 						int err = ftruncate(fileno(fd), 0);
@@ -279,6 +317,7 @@ char * dimension (FILE * fd, int* logLength)
 				case 'c':
 				case 'C':
 					{
+						// user choose to create a new file
 						char *inputLen = NULL;
 	                    printf("New file name: ");
 						read = getline(&name, &len, stdin);
@@ -289,7 +328,7 @@ char * dimension (FILE * fd, int* logLength)
 							read = getline(&inputLen, &len, stdin);
 							tempLogLenght = atoi(inputLen);
 
-							if (tempLogLenght < MINLOGLEN)
+							if (tempLogLenght < MINLOGLEN)  // check minimum file lenght
 							{
 								printf("Log lenght dimension is too short. Minimum allowed size: %d\n", MINLOGLEN);
 							}
@@ -305,26 +344,29 @@ char * dimension (FILE * fd, int* logLength)
 					break;
 			}
 		} while (line[0] == 'a');
+
+		// write the new file name in the pipe
 		close(littlePipe[READ]);
 		write(littlePipe[WRITE], name, strlen(name));
 		close(littlePipe[WRITE]);
 		exit(0);
 	}
+
 	int returnCode;
 	wait(&returnCode);
-	if (WEXITSTATUS(returnCode) == 69)
-		cExit(0);
-	close(littlePipe[WRITE]);
+	if (WEXITSTATUS(returnCode) == 69)  // user choose to exit
+	{
+		printf("Goodbye\n");
+		exit(0);
+	}
+
+	close(littlePipe[WRITE]);  // we need only to read the file name
 	read(littlePipe[READ], name, MAXLENGHT_FILENAME);
 	close(littlePipe[READ]);
-	if (name[0] == '\0')
-		return NULL;
-	printf("\nNew file name is %s\n\n", name);
-	return name;
-}
 
-void cExit (int code)
-{
-	printf("Goodbye\n");
-	exit(code);
+	if (name[0] == '\0')  // user choose to overwrite the current file
+		return NULL;
+
+	printf("\nNew file name is %s\n\n", name);
+	return name;  // user choose a new file for the log
 }

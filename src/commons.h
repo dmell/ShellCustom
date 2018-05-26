@@ -1,3 +1,11 @@
+/*
+
+file with libraries and global variables.
+Here's the declaration of substring function, used in various point of the commands
+
+*/
+
+
 #ifndef commons_h
 #define commons_h
 
@@ -36,14 +44,17 @@ char * errfile;
 int logfileLenght; // logs' lenght
 int bufLenght; // buffer's lenght
 int code; // flag to indicate if the user wants the return code of commands
+
+// for stdin, stdout, stderr backup
 int stdin_restore;
 int stdout_restore;
 int stderr_restore;
-pid_t pid; // command process pid
+
+pid_t pid; // current command process pid
 int killed; // true only if the process has been killed by the user
 
 /*function definitions*/
 /* extracts a substring between given indexes */
-char * substring (char * src, int first, int last);
+char * substring (const char * src, int first, int last);
 
 #endif
