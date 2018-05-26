@@ -51,7 +51,7 @@ int stdout_restore;
 int stderr_restore;
 
 pid_t pid; // current command process pid
-int killed; // true only if the process has been killed by the user
+int killed; // set to 0 only if the process has been killed by the user
 
 /*function definitions*/
 /* extracts a substring between given indexes */

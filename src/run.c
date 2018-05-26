@@ -1,12 +1,12 @@
 /*
 
-run function handle the real execution of the commands.
-run handle the redirections in case of <, > or >> characters.
+run function handles the real execution of the commands.
+run handles the redirections in case of <, > or >> characters.
 It saves the output of the execution in a pipe and then print it in the
 shell and in the log files, handling also the pipig character.
 It returns an int representing the outcome of the execution.
 
-handler function kill the child process. The pid of the current child process
+handler function kills the child process. The pid of the current child process
 is stored in a global variable.
 
 */
@@ -103,7 +103,7 @@ int run (char ** cmd, const int cmds, FILE ** f)
     	}
     	else // parent
     	{
-    		signal(SIGSTOP, handler);  // handling of ^C, if an execution is not responding
+    		signal(SIGINT, handler);  // handling of ^C, if an execution is not responding
 
 			// catch the return code of the execution
     		wait(&returnCode);

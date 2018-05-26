@@ -1,7 +1,7 @@
 /*
 
 functions for the parsing of the commands. These functions look for multiple
-commands, commands divided by piping, parameter of the commands
+commands, commands divided by piping, parameters of the commands
 
 */
 
@@ -10,7 +10,7 @@ commands, commands divided by piping, parameter of the commands
 #include "parsers.h"
 
 // returns an array of commands divided by pipe characters
-// return the number of commands found with cmds passed by reference
+// returns the number of commands found with cmds passed by reference
 char** parseCommand (const char * cmd, int * cmds)
 {
 	// counting commands by searching pipes
@@ -26,7 +26,7 @@ char** parseCommand (const char * cmd, int * cmds)
 
 
 	// at this point we create a new vector of strings, that contains a command per position
-	// since we have counted how many they are, there here's the dynaminc allocation
+	// since we have counted how many they are, there here's the dynamic allocation
 	char ** cleancmd = malloc((*cmds)*(sizeof(char *)));
 	int i;
 	for (i = 0; i < *cmds; i++)
