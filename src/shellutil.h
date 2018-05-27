@@ -17,6 +17,6 @@ void checkParameters(int argc, char ** argv);
 /* show the manual in case of --help option */
 void showManual();
 /* when the log file dimension exceeds*/
-char * dimension(FILE * fd, int *);
+char * dimension(FILE *, int *);
 
 #endif

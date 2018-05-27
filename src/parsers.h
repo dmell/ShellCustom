@@ -18,6 +18,4 @@ char ** splitArgs (const char * cmd);
 /* find multiple commands divided by ; && || */
 char ** findMultipleCommands(char ** operators, const char * line);
 
-
-
 #endif

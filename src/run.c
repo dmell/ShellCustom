@@ -115,18 +115,18 @@ int run (char ** cmd, const int cmds, FILE ** f)
     		signal(SIGINT, SIG_DFL); // restore default ^C handler
 
     		//INITIALIZING BUFFERS
-    		char buf[MAXBUF]; // stdout buffer
-    		char buf2[MAXBUF]; // stderr buffer
+    		char buf[DEFAULTBUFLEN]; // stdout buffer
+    		char buf2[DEFAULTBUFLEN]; // stderr buffer
     		char date[DATESIZE];  // date buffer
-    		bzero(buf, MAXBUF); // clean the stdout buffer
-    		bzero(buf2, MAXBUF); // clean the stderr buffer
+    		bzero(buf, DEFAULTBUFLEN); // clean the stdout buffer
+    		bzero(buf2, DEFAULTBUFLEN); // clean the stderr buffer
     		bzero(date, DATESIZE); // clean the date buffer
 
     		strftime(date, sizeof(date), "%c", tm); // write the date in the buf
 
 			// read the output written from the child in the pipes
-    		int dim = read(fdIPC_out[READ], buf, MAXBUF);  // read stdout
-    		int dim2 = read(fdIPC_err[READ], buf2, MAXBUF);  // read stderr
+    		int dim = read(fdIPC_out[READ], buf, DEFAULTBUFLEN);  // read stdout
+    		int dim2 = read(fdIPC_err[READ], buf2, DEFAULTBUFLEN);  // read stderr
 
 			if (i != cmds-1)  // if this is not the last command we send the output to the next command
 			{
@@ -146,7 +146,7 @@ int run (char ** cmd, const int cmds, FILE ** f)
     		close(fdIPC_out[READ]);
     		close(fdIPC_err[READ]);
 
-    		// we read MAXBUF character and then we will check if it is less then bufLenght
+    		// we read DEFAULTBUFLEN character and then we will check if it is less then bufLenght
     		if (dim > bufLenght)
     		{
     			printf("The output of the command is too long.\n\n");
@@ -160,6 +160,8 @@ int run (char ** cmd, const int cmds, FILE ** f)
     		bzero(logErrBuf, LOGLAYOUT_DIM);
 
     		int j;
+            if (doubleLog == 0)
+                strcat(logOutBuf, "---STDOUT LOG---\n\n");
     		if(returnCode == 255) // if the command does not exists
     		{
     			strcat(logOutBuf, "SYSTEM: sintax error for not valid command ");
@@ -200,6 +202,8 @@ int run (char ** cmd, const int cmds, FILE ** f)
 	    	}
 
     		// STDERR LOG
+            if (doubleLog == 0)
+                strcat(logErrBuf, "---STDERR LOG---\n\n");
     		strcat(logErrBuf, "COMMAND:\t");
     		for (j = 0; j < cmds; j++)
     		{
@@ -229,8 +233,12 @@ int run (char ** cmd, const int cmds, FILE ** f)
     		strcat(logErrBuf, SEPARATOR);
 
 			// compute the new lenght for log files before writing outputs
+            // if there is only one log file, we compute everything on logOutLen
     		logOutLen += strlen(logOutBuf);
-    		logErrLen += strlen(logErrBuf);
+    		if (doubleLog)
+                logErrLen += strlen(logErrBuf);
+            else
+                logOutLen += strlen(logErrBuf);
 
     		// log file lenght handling
 			if (logOutLen > maxOutLogLenght)  // max out file lenght exeeded

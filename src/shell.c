@@ -3,7 +3,7 @@
 main function of the project.
 
 main inizializes the global variables, calls the check parameters function,
-opens the log files, handle the prompt for the user and take the input commands,
+opens the log files, handles the prompt for the user and takes the input commands,
 does a first parsing of the commands looking for multiple commands ( && || ;).
 When "exit" command occours, main frees the memory and closes the streams
 
@@ -28,10 +28,10 @@ int main(int argc, char **argv)
 	logfileLenght = -1;
 	bufLenght = -1;
 
-	code = 0;  // usato come bool per opzione codice uscita
+	code = 0;
 
 	// global file descriptor for stdin, stdout, stderr, to restore the default
-	// I/O stream wherever is necessary
+	// I/O stream whenever it is necessary
 	stdin_restore = dup(0);
 	stdout_restore = dup(1);
 	stderr_restore = dup(2);
@@ -41,11 +41,23 @@ int main(int argc, char **argv)
 	checkParameters(argc, argv);  // check command line parameters given by the user
 
 	// open streams for the log (in writing mode) with the names given by the user
-	FILE * fd[2];
-	fd[0] = fopen(outfile, "w");
-	fd[1] = fopen(errfile, "w");
+	FILE * fp[2];
+	fp[0] = fopen(outfile, "w");
+	// if the user wants both logs in the same file, we check the strings and then
+	// without changing all the code we make the second file pointer point the same 
+	// file. The flag is set to change behaviour in counting characters.
+	if (strcmp(outfile, errfile) == 0)
+	{
+		fp[1] = fp[0];
+		doubleLog = 0;
+	}
+	else
+	{
+		fp[1] = fopen(errfile, "w");
+		doubleLog = 1;
+	}
 
-	if (fd[0] == NULL || fd[1] == NULL) // if fopen failed
+	if (fp[0] == NULL || fp[1] == NULL) // if fopen failed
 	{
 		perror("fopen");
 		exit(1);
@@ -61,7 +73,6 @@ int main(int argc, char **argv)
 
     //Brief description of the Shell
     printf("CUSTOM SHELL - 185322, 186291, 186893\n");
-    printf("v1.0 (May 25 2018)\n");
     printf("Simple shell based on BASH with real time on file logging capabilities\n");
     printf("Type exit to dismiss\n");
 
@@ -116,7 +127,7 @@ int main(int argc, char **argv)
 				cmd = parseCommand(commands[indexMultipleCommands], &cmds);
 
 				// run execute the command and the logging
-				valuePreviousCommand = run(cmd, cmds, fd);
+				valuePreviousCommand = run(cmd, cmds, fp);
 
 				int i;
 				// parseCommand allocates every time a new char **, we can free the memory
@@ -142,11 +153,20 @@ int main(int argc, char **argv)
 	free(errfile);
 
 	// close streams
-	if (fclose(fd[0]) && fclose(fd[1]))
+	if (fclose(fp[0]))
 	{
 		perror("fclose");
 		exit(1);
 	}
+	if (doubleLog)
+	{
+		if (fclose(fp[1]))
+		{
+			perror("fclose");
+			exit(1);
+		}
+	}
+
 	
 	printf("Goodbye\n");
 	return 0;

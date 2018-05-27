@@ -129,7 +129,7 @@ void checkParameters(int argc, char ** argv)
 		logfileLenght = DEFAULTLOGLEN;  // default
 
 	if (bufLenght == -1)  // if the maximum length for the output has not been specified
-		bufLenght = MAXBUF;  // default
+		bufLenght = DEFAULTBUFLEN;  // default
 
 
 	// logfileLenght has a minimum value
@@ -141,18 +141,17 @@ void checkParameters(int argc, char ** argv)
 		exit(1);
 	}
 
+	if (bufLenght < MINBUFLEN)
+	{
+		printf("shell: error in buffer or file size.\n");
+		printf("Try './shell --help' for more information.\n");
+		exit(1);	
+	}
+
 	// we check that the user has specified the log files (mandatory)
 	if (outfile == NULL || errfile == NULL)
 	{
 		printf("shell: missing mandatory parameter.\n");
-		printf("Try './shell --help' for more information.\n");
-		exit(1);
-	}
-
-	// we check that outfile name is different from errfile
-	if (strcmp(outfile,errfile) == 0)
-	{
-		printf("shell: outfile and errfile parameters cannot be the same.\n");
 		printf("Try './shell --help' for more information.\n");
 		exit(1);
 	}
@@ -166,15 +165,14 @@ void showManual()
 	printf("Mandatory parameters:\n");
 	printf("  -o[=\"NAMEFILE\"], --outfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stdout.\n\n");
 	printf("  -e[=\"NAMEFILE\"], --errfile[=\"NAMEFILE\"]\tNAMEFILE is the log file for the stderr.\n\n");
-	printf("\t\t\t\t\t\toutfile and errfile can not be equals.\n\n");
 	printf("Optional parameters:\n");
 	printf("  -c,--code\t\t\t\t\talso indicates the return code of the commands.\n\n");
 	printf("  -m[=NUMBER], --maxlen[=NUMBER]\t\tNUMBER is the maximum length of log files");
 	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default).\n", DEFAULTLOGLEN);
 	printf("\t\t\t\t\t\tmaxlen can not be shorter than %d.\n\n", MINLOGLEN);
 	printf("  -s[=NUMBER], --size[=NUMBER]\t\t\tNUMBER is the maximum length of command response");
-	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default).\n", MAXBUF);
-	printf("\t\t\t\t\t\tmaxlen can not be shorter than size.\n");
+	printf("\n\t\t\t\t\t\t(in number of characters, 1000000 char is about 1Mb) (%d by default).\n", DEFAULTBUFLEN);
+	printf("\t\t\t\t\t\tsize can not be shorter than %d.\n\n", MINBUFLEN);
 	exit(0);
 }
 
@@ -298,7 +296,7 @@ char * dimension (FILE * fd, int* logLength)
 			switch (line[0]) {
 				case 'e':
 				case 'E':
-					exit(69);  // user choose to exit
+					exit(69);  // user chooses to exit
 					break;
 				case 'o':
 				case 'O':
@@ -354,7 +352,7 @@ char * dimension (FILE * fd, int* logLength)
 
 	int returnCode;
 	wait(&returnCode);
-	if (WEXITSTATUS(returnCode) == 69)  // user choose to exit
+	if (WEXITSTATUS(returnCode) == 69)  // user chose to exit
 	{
 		printf("Goodbye\n");
 		exit(0);
@@ -364,7 +362,7 @@ char * dimension (FILE * fd, int* logLength)
 	read(littlePipe[READ], name, MAXLENGHT_FILENAME);
 	close(littlePipe[READ]);
 
-	if (name[0] == '\0')  // user choose to overwrite the current file
+	if (name[0] == '\0')  // user chose to overwrite the current file
 		return NULL;
 
 	printf("\nNew file name is %s\n\n", name);

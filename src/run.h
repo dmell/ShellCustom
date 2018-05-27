@@ -14,6 +14,4 @@ int run (char ** cmd, const int cmds, FILE ** fd);
 /*handler for the SIGKILL*/
 void handler (int sig);
 
-
-
 #endif

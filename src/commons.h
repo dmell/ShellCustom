@@ -28,7 +28,8 @@ Here's the declaration of substring function, used in various point of the comma
 #define CMDSIZE 32 //parsers
 #define DEFAULTLOGLEN 4096
 #define MINLOGLEN 512
-#define MAXBUF 4096
+#define DEFAULTBUFLEN 4096
+#define MINBUFLEN 64
 #define SEPARATOR "\n\n------------------------------------------------\n\n"
 #define DATESIZE 32
 #define LOGLAYOUT_DIM 4400
@@ -41,6 +42,7 @@ int logOutLen; // logs' current dimension
 int logErrLen;
 char * outfile; // logs' names
 char * errfile;
+int doubleLog; // set if logs have different name
 int logfileLenght; // logs' lenght
 int bufLenght; // buffer's lenght
 int code; // flag to indicate if the user wants the return code of commands
